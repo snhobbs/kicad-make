@@ -3,7 +3,7 @@ IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interac
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 
-PROJECT=PROJECTNAME
+PROJECT=PROJECT_NAME
 VERSION=A.B.X
 SCH=${PROJECT}.kicad_sch
 PCB=${PROJECT}.kicad_pcb
@@ -14,7 +14,7 @@ XMLBOM=${TMP}/${PROJECT}_${VERSION}_BOM.xml
 BOM=${MANUFACTURING_DIR}/assembly/${PROJECT}_${VERSION}_BOM.csv
 MANUFACTURING_DIR=fab
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
-STEP=${MANUFACTURING_DIR}/${PROJECT}_${VERSION}.step
+STEP=3D/${PROJECT}_${VERSION}.step
 CENTROID=${MANUFACTURING_DIR}/assembly/centroid.csv
 IBOM=${PROJECT}_${VERSION}_interactive_bom.html
 FABZIP=${PROJECT}_${VERSION}.zip
@@ -29,6 +29,9 @@ all: schematic BOM gerbers ibom board step fabzip
 clean:
 	rm ${DRILL} 
 	rm ${PDFSCH} ${XMLBOM} ${BOM} ${STEP} ${CENTROID} ${IBOM} ${MANUFACTURING_DIR}/gerbers/*
+	rm ${FABZIP}
+	rmdir ${MANUFACTURING_DIR}/gerbers ${MANUFACTURING_DIR}/assembly ${MANUFACTURING_DIR}
+	rmdir tmp 3D 
 
 
 # Generates schematic
@@ -43,6 +46,7 @@ ${XMLBOM}: ${SCH}
 
 
 ${BOM}: ${XMLBOM}
+	mkdir -p ${MANUFACTURING_DIR}/assembly
 	${PYTHON} "/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"  $<  $@ > $@
 
 
@@ -59,6 +63,7 @@ ${CENTROID}: ${PCB}
 
 
 ${STEP}: ${PCB}
+	mkdir -p 3D
 	${KICAD} pcb export step $< --drill-origin --subst-models -f -o ${STEP}
 
 
