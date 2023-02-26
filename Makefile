@@ -6,6 +6,7 @@ KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
 TMP=/tmp
 MANUFACTURING_DIR=fab
+PCBNEW_DO=pcbnew_do
 
 # Project Information
 PROJECT=PROJECT_NAME
@@ -13,14 +14,19 @@ VERSION=A.B.X
 SCH=${PROJECT}.kicad_sch
 PCB=${PROJECT}.kicad_pcb
 
-PDFSCH=${PROJECT}_${VERSION}.pdf
-XMLBOM=${TMP}/${PROJECT}_${VERSION}_BOM.xml
-BOM=${MANUFACTURING_DIR}/assembly/${PROJECT}_${VERSION}_BOM.csv
+SCHBASE=$(basename ${SCH})
+PCBBASE=$(basename ${PCB})
+PDFSCH=${SCHBASE}.pdf
+LOG=log.log
+
+XMLBOM=${TMP}/${SCHBASE}_${VERSION}_BOM.xml
+BOM=${MANUFACTURING_DIR}/assembly/${SCHBASE}_${VERSION}_BOM.csv
+
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
-STEP=3D/${PROJECT}_${VERSION}.step
+STEP=3D/${PCBBASE}_${VERSION}.step
 CENTROID=${MANUFACTURING_DIR}/assembly/centroid.csv
-IBOM=${PROJECT}_${VERSION}_interactive_bom.html
-FABZIP=${PROJECT}_${VERSION}.zip
+IBOM=${PCBBASE}_${VERSION}_interactive_bom.html
+FABZIP=${PCBBASE}_${VERSION}.zip
 
 
 export PYTHONPATH=${KICAD_PYTHON_PATH}
@@ -70,16 +76,25 @@ ${STEP}: ${PCB}
 	${KICAD} pcb export step $< --drill-origin --subst-models -f -o ${STEP}
 
 
-gerbers: ${PCB}
+gerbers: ${PCB} run-drc
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
 	${KICAD} pcb export gerbers --subtract-soldermask $< -o ${MANUFACTURING_DIR}/gerbers
 
-
+run-drc: ${PCB}
+	${PCBNEW_DO} ${PCBNEW_DO} run_drc ${PCB} ./ >> ${LOG}
 ${IBOM}: ${PCB}
 	${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
 
 ${FABZIP}: board
 	zip -r ${FABZIP} ${MANUFACTURING_DIR}
+	
+# Add board renders
+
+# Add expanding BOMs
+
+# Add placement from spreadsheet
+.PHONY: place
+place: ${}
 
 .PHONY: zip
 zip: ${FABZIP}
