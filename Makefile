@@ -3,10 +3,11 @@ IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interac
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 
-PROJECT=PROJECT_NAME
+PROJECT=PROJECTNAME
 VERSION=A.B.X
 SCH=${PROJECT}.kicad_sch
-PCB=${PROJECT}.kicad_pcb
+PCB=${PROJECT}-rounded.kicad_pcb
+PCBBASE=$(basename ${PCB})
 
 PDFSCH=${PROJECT}_${VERSION}.pdf
 TMP=tmp
@@ -14,10 +15,10 @@ XMLBOM=${TMP}/${PROJECT}_${VERSION}_BOM.xml
 BOM=${MANUFACTURING_DIR}/assembly/${PROJECT}_${VERSION}_BOM.csv
 MANUFACTURING_DIR=fab
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
-STEP=3D/${PROJECT}_${VERSION}.step
+STEP=3D/${PCBBASE}_${VERSION}.step
 CENTROID=${MANUFACTURING_DIR}/assembly/centroid.csv
-IBOM=${PROJECT}_${VERSION}_interactive_bom.html
-FABZIP=${PROJECT}_${VERSION}.zip
+IBOM=${PCBBASE}_${VERSION}_interactive_bom.html
+FABZIP=${PCBBASE}_${VERSION}.zip
 
 
 export PYTHONPATH=${KICAD_PYTHON_PATH}
@@ -54,7 +55,7 @@ ${BOM}: ${XMLBOM}
 ${DRILL}: ${PCB}
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
 	${KICAD} pcb export drill --units mm $< -o ./
-	mv ${PROJECT}.drl ${DRILL}
+	mv ${PCBBASE}.drl ${DRILL}
 
 
 ${CENTROID}: ${PCB}
