@@ -1,18 +1,21 @@
+# Tools & Tool Paths
 KICAD=kicad-cli
 IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
+BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
+TMP=/tmp
+MANUFACTURING_DIR=fab
 
+# Project Information
 PROJECT=PROJECT_NAME
 VERSION=A.B.X
 SCH=${PROJECT}.kicad_sch
 PCB=${PROJECT}.kicad_pcb
 
 PDFSCH=${PROJECT}_${VERSION}.pdf
-TMP=tmp
 XMLBOM=${TMP}/${PROJECT}_${VERSION}_BOM.xml
 BOM=${MANUFACTURING_DIR}/assembly/${PROJECT}_${VERSION}_BOM.csv
-MANUFACTURING_DIR=fab
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 STEP=3D/${PROJECT}_${VERSION}.step
 CENTROID=${MANUFACTURING_DIR}/assembly/centroid.csv
@@ -47,7 +50,7 @@ ${XMLBOM}: ${SCH}
 
 ${BOM}: ${XMLBOM}
 	mkdir -p ${MANUFACTURING_DIR}/assembly
-	${PYTHON} "/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"  $<  $@ > $@
+	${PYTHON} ${BOM_SCRIPT}  $<  $@ > $@
 
 
 # Complains about output needing to be a directory, work around this
