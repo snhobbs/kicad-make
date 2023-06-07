@@ -1,0 +1,11 @@
+#auto_saved_files#
+fp-info-cache
+*-backups
+fab
+fp-lib-table
+*.log
+*.out
+build
+*.egg-info
+__pycache__
+CMakeFiles
