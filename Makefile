@@ -22,26 +22,27 @@ DRC_RESULT=drc_result.rpt
 
 # Project Information
 PROJECT=PROJECTNAME
-VERSION=A.B.X
 SCH=${PROJECT}.kicad_sch
 PCB=${PROJECT}.kicad_pcb
 PCBBASE=$(basename ${PCB})
-
 SCHBASE=$(basename ${SCH})
-PCBBASE=$(basename ${PCB})
+VERSION=A.B.X
+
 PDFSCH=${SCHBASE}_${VERSION}.pdf
 LOG=log.log
-
+MECH_DIR=mechanical
 XMLBOM=${TMP}/${SCHBASE}_${VERSION}_BOM.xml
 BOM=${MANUFACTURING_DIR}/assembly/${SCHBASE}_${VERSION}_BOM.csv
 LCSCBOM=${MANUFACTURING_DIR}/assembly/${SCHBASE}_${VERSION}_LCSC_BOM.csv
 
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
-STEP=3D/${PCBBASE}_${VERSION}.step
+STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 CENTROID=${MANUFACTURING_DIR}/assembly/centroid.csv
 JLC_CENTROID=${MANUFACTURING_DIR}/assembly/jlc-centroid.csv
 IBOM=${PCBBASE}_${VERSION}_interactive_bom.html
 FABZIP=${PCBBASE}_${VERSION}.zip
+GENCAD=${PCBBASE}_${VERSION}.cad
+OUTLINE=${MECH_DIR}/board-outline.svg
 
 
 export PYTHONPATH=${KICAD_PYTHON_PATH}
@@ -55,17 +56,17 @@ no-drc: schematic BOM ibom step gerbers board fabzip
 
 clean:
 	rm ${PDFSCH} ${XMLBOM} ${BOM} ${STEP} ${CENTROID} ${JLC_CENTROID} ${IBOM} ${MANUFACTURING_DIR}/gerbers/*
-	rm ${FABZIP}
+	rm ${FABZIP} kicad-cli ${OUTLINE}
 	rmdir ${MANUFACTURING_DIR}/gerbers ${MANUFACTURING_DIR}/assembly ${MANUFACTURING_DIR}
 	rmdir 3D 
 
 
 drc: ${PCB}
-	${KIKIT} drc run ${PCB}
-	#${PCBNEW_DO} run_drc ${PCB} ./ >> log.log
+	${KIKIT} drc run $<
+	#${PCBNEW_DO} run_drc $< ./ >> log.log
 
 erc: ${SCH}
-	${PCBNEW_DO} run_erc ${SCH} ./ >> log.log
+	${PCBNEW_DO} run_erc $< ./ >> log.log
 
 # Generates schematic
 ${PDFSCH} : ${SCH}
@@ -86,8 +87,8 @@ ${BOM}: ${XMLBOM}
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB}
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
-	${KICAD} pcb export drill --units mm $< -o ./
-	mv ${PCBBASE}.drl ${DRILL}
+	${KICAD} pcb export drill --excellon-units mm $< -o ./
+	mv ${PCBBASE}.drl $@
 
 
 ${CENTROID}: ${PCB}
@@ -97,13 +98,13 @@ ${CENTROID}: ${PCB}
 
 ${JLC_CENTROID}: ${CENTROID}
 	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >> 
-	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" >> $@
+	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > $@
 	tail --lines=+2 $< >> $@
 
 
 ${STEP}: ${PCB}
-	mkdir -p 3D
-	${KICAD} pcb export step $< --drill-origin --subst-models -f -o ${STEP}
+	mkdir -p ${MECH_DIR}
+	${KICAD} pcb export step $< --drill-origin --subst-models -f -o $@
 
 
 gerbers: ${PCB} #drc
@@ -116,8 +117,17 @@ ${IBOM}: ${PCB}
 
 
 ${FABZIP}: board
-	zip -rj ${FABZIP} ${MANUFACTURING_DIR}/gerbers
+	zip -rj $@ ${MANUFACTURING_DIR}/gerbers
 	
+
+# Board Outline
+${OUTLINE}: ${PCB}
+	${KICAD} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
+
+
+gencad: gerbers
+	${KICAD} pcb export gencad -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
+
 # Add board renders
 
 # Add expanding BOMs
@@ -148,7 +158,7 @@ BOM: ${BOM}
 fabzip: ${FABZIP}
 
 .PHONY: board
-board: gerbers ${DRILL} ${CENTROID} ${JLC_CENTROID} ${ASSEMBLY_BOM}
+board: gerbers ${DRILL} ${CENTROID} ${JLC_CENTROID} ${ASSEMBLY_BOM} ${OUTLINE}
 
 .PHONY: setup
 setup: ${ASSEMBLY_BOM} ${BOM} schematic ibom step
