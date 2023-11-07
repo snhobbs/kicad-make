@@ -1,0 +1,6 @@
+[submodule "libs/kikit"]
+	path = libs/kikit
+	url = git@github.com:snhobbs/kikit
+[submodule "libs/InteractiveHtmlBom"]
+	path = libs/InteractiveHtmlBom
+	url = git@github.com:openscopeproject/InteractiveHtmlBom.git

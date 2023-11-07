@@ -12,7 +12,7 @@ IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interac
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
-PCBNEW_DO=pcbnew_do
+PCBNEW_DO=pcbnew_do # Kiauto
 KIKIT=kikit
 
 TMP=/tmp
