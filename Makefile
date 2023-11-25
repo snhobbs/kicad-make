@@ -45,7 +45,7 @@ GENCAD=${PCBBASE}_${VERSION}.cad
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 
-export PYTHONPATH=${KICAD_PYTHON_PATH}
+#export PYTHONPATH=${KICAD_PYTHON_PATH}
 
 
 .PHONY: all
