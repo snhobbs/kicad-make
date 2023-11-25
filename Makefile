@@ -17,7 +17,6 @@ KIKIT=kikit
 
 TMP=/tmp
 MANUFACTURING_DIR=fab
-
 DRC_RESULT=drc_result.rpt
 
 # Project Information
@@ -37,7 +36,8 @@ LCSCBOM=${MANUFACTURING_DIR}/assembly/${SCHBASE}_${VERSION}_LCSC_BOM.csv
 
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
-CENTROID=${MANUFACTURING_DIR}/assembly/centroid.csv
+CENTROID_CSV=${MANUFACTURING_DIR}/assembly/centroid.csv
+CENTROID_GERBER=${MANUFACTURING_DIR}/assembly/centroid.gerber
 JLC_CENTROID=${MANUFACTURING_DIR}/assembly/jlc-centroid.csv
 IBOM=${PCBBASE}_${VERSION}_interactive_bom.html
 FABZIP=${PCBBASE}_${VERSION}.zip
@@ -49,16 +49,19 @@ export PYTHONPATH=${KICAD_PYTHON_PATH}
 
 
 .PHONY: all
-all: schematic BOM ibom step drc gerbers board fabzip
+all: schematic BOM manufacturing
 
 .PHONY: no-drc
 no-drc: schematic BOM ibom step gerbers board fabzip
 
+.PHONY: manufacturing
+manufacturing: ibom step drc gerbers board fabzip
+
 clean:
-	rm ${PDFSCH} ${XMLBOM} ${BOM} ${STEP} ${CENTROID} ${JLC_CENTROID} ${IBOM} ${MANUFACTURING_DIR}/gerbers/*
-	rm ${FABZIP} kicad-cli ${OUTLINE}
-	rmdir ${MANUFACTURING_DIR}/gerbers ${MANUFACTURING_DIR}/assembly ${MANUFACTURING_DIR}
-	rmdir 3D 
+	-rm ${PDFSCH} ${XMLBOM} ${BOM} ${STEP} ${CENTROID_GERBER} ${CENTROID_CSV} ${JLC_CENTROID} ${IBOM} ${MANUFACTURING_DIR}/gerbers/*
+	-rm ${FABZIP} kicad-cli ${OUTLINE}
+	-rmdir ${MANUFACTURING_DIR}/gerbers ${MANUFACTURING_DIR}/assembly ${MANUFACTURING_DIR}
+	-rmdir 3D mechanical
 
 
 drc: ${PCB}
@@ -91,12 +94,11 @@ ${DRILL}: ${PCB}
 	mv ${PCBBASE}.drl $@
 
 
-${CENTROID}: ${PCB}
+${CENTROID_CSV}: ${PCB}
 	mkdir -p ${MANUFACTURING_DIR}/assembly
 	${KICAD} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
 
-
-${JLC_CENTROID}: ${CENTROID}
+${JLC_CENTROID}: ${CENTROID_CSV}
 	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >> 
 	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > $@
 	tail --lines=+2 $< >> $@
@@ -158,7 +160,7 @@ BOM: ${BOM}
 fabzip: ${FABZIP}
 
 .PHONY: board
-board: gerbers ${DRILL} ${CENTROID} ${JLC_CENTROID} ${ASSEMBLY_BOM} ${OUTLINE}
+board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} ${ASSEMBLY_BOM} ${OUTLINE}
 
 .PHONY: setup
 setup: ${ASSEMBLY_BOM} ${BOM} schematic ibom step
