@@ -7,6 +7,7 @@
 #
 #
 # Tools & Tool Paths
+DIR=$(shell pwd)
 KICAD=kicad-cli
 IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
@@ -16,40 +17,41 @@ PCBNEW_DO=pcbnew_do # Kiauto
 KIKIT=kikit
 
 TMP=/tmp
-MANUFACTURING_DIR=fab
+MANUFACTURING_DIR=${DIR}/fab
 DRC_RESULT=drc_result.rpt
 
 # Project Information
 PROJECT=PROJECTNAME
-SCH=${PROJECT}.kicad_sch
-PCB=${PROJECT}.kicad_pcb
-PCBBASE=$(basename ${PCB})
-SCHBASE=$(basename ${SCH})
+SCH=${DIR}/${PROJECT}.kicad_sch
+PCB=${DIR}/${PROJECT}.kicad_pcb
+PCBBASE=$(basename $(notdir ${PCB}))
+SCHBASE=$(basename $(notdir ${SCH}))
 VERSION=A.B.X
 
-PDFSCH=${SCHBASE}_${VERSION}.pdf
-LOG=log.log
-MECH_DIR=mechanical
+ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
+PDFSCH=${DIR}/${SCHBASE}_${VERSION}.pdf
+LOG=${DIR}/log.log
+MECH_DIR=${DIR}/mechanical
 XMLBOM=${TMP}/${SCHBASE}_${VERSION}_BOM.xml
-BOM=${MANUFACTURING_DIR}/assembly/${SCHBASE}_${VERSION}_BOM.csv
-LCSCBOM=${MANUFACTURING_DIR}/assembly/${SCHBASE}_${VERSION}_LCSC_BOM.csv
+BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
+LCSCBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_LCSC_BOM.csv
 
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
-CENTROID_CSV=${MANUFACTURING_DIR}/assembly/centroid.csv
-CENTROID_GERBER=${MANUFACTURING_DIR}/assembly/centroid.gerber
-JLC_CENTROID=${MANUFACTURING_DIR}/assembly/jlc-centroid.csv
-IBOM=${PCBBASE}_${VERSION}_interactive_bom.html
-FABZIP=${PCBBASE}_${VERSION}.zip
-GENCAD=${PCBBASE}_${VERSION}.cad
+CENTROID_CSV=${ASSEMBLY_DIR}/centroid.csv
+CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
+JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
+IBOM=${DIR}/${PCBBASE}_${VERSION}_interactive_bom.html
+FABZIP=${DIR}/${PCBBASE}_${VERSION}.zip
+GENCAD=${DIR}/${PCBBASE}_${VERSION}.cad
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 
-#export PYTHONPATH=${KICAD_PYTHON_PATH}
+export PYTHONPATH=
 
 
 .PHONY: all
-all: schematic BOM manufacturing
+all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
 
 .PHONY: no-drc
 no-drc: schematic BOM ibom step gerbers board fabzip
@@ -66,10 +68,10 @@ clean:
 
 drc: ${PCB}
 	${KIKIT} drc run $<
-	#${PCBNEW_DO} run_drc $< ./ >> log.log
+	#${PCBNEW_DO} run_drc $< ./ >> ${DIR}/log.log
 
 erc: ${SCH}
-	${PCBNEW_DO} run_erc $< ./ >> log.log
+	${PCBNEW_DO} run_erc $< ./ >> ${DIR}/log.log
 
 # Generates schematic
 ${PDFSCH} : ${SCH}
@@ -77,15 +79,18 @@ ${PDFSCH} : ${SCH}
 
 
 # Generate python-BOM
-${XMLBOM}: ${SCH}
-	mkdir -p ${TMP}
+${XMLBOM}: ${SCH} ${TMP}
 	${KICAD} sch export python-bom $< -o $@
 
 
-${BOM}: ${XMLBOM}
-	mkdir -p ${MANUFACTURING_DIR}/assembly
+${BOM}: ${XMLBOM} ${ASSEMBLY_DIR}
 	${PYTHON} ${BOM_SCRIPT}  $<  $@ > $@
 
+${MANUFACTURING_DIR}:
+	mkdir -p $@
+
+${ASSEMBLY_DIR}: ${MANUFACTURING_DIR}
+	mkdir -p $@
 
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB}
@@ -94,22 +99,22 @@ ${DRILL}: ${PCB}
 	mv ${PCBBASE}.drl $@
 
 
-${CENTROID_CSV}: ${PCB}
-	mkdir -p ${MANUFACTURING_DIR}/assembly
+${CENTROID_CSV}: ${PCB} ${ASSEMBLY_DIR}
 	${KICAD} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
 
-${JLC_CENTROID}: ${CENTROID_CSV}
+${JLC_CENTROID}: ${CENTROID_CSV} ${ASSEMBLY_DIR}
 	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >> 
 	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > $@
 	tail --lines=+2 $< >> $@
 
-
-${STEP}: ${PCB}
+${MECH_DIR}:
 	mkdir -p ${MECH_DIR}
+
+${STEP}: ${PCB} ${MECH_DIR}
 	${KICAD} pcb export step $< --drill-origin --subst-models -f -o $@
 
 
-gerbers: ${PCB} #drc
+gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
 	${KICAD} pcb export gerbers --subtract-soldermask $< -o ${MANUFACTURING_DIR}/gerbers
 
