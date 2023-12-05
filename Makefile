@@ -55,7 +55,7 @@ export PYTHONPATH=
 all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
 
 ${IBOM_SCRIPT}:
-	wget https://raw.githubusercontent.com/TheJigsApp/InteractiveHtmlBom/master/InteractiveHtmlBom/generate_interactive_bom.py $@
+	wget https://raw.githubusercontent.com/TheJigsApp/InteractiveHtmlBom/master/InteractiveHtmlBom/generate_interactive_bom.py -o $@
 
 .PHONY: no-drc
 no-drc: schematic BOM ibom step gerbers board fabzip
