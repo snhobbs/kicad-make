@@ -9,7 +9,8 @@
 # Tools & Tool Paths
 DIR=$(shell pwd)
 KICAD=kicad-cli
-IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interactive_bom.py
+#IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interactive_bom.py
+IBOM_SCRIPT=${DIR}/generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
