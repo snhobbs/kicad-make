@@ -53,6 +53,9 @@ export PYTHONPATH=
 .PHONY: all
 all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
 
+${IBOM_SCRIPT}:
+	wget https://raw.githubusercontent.com/TheJigsApp/InteractiveHtmlBom/master/InteractiveHtmlBom/generate_interactive_bom.py $@
+
 .PHONY: no-drc
 no-drc: schematic BOM ibom step gerbers board fabzip
 
@@ -119,7 +122,7 @@ gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	${KICAD} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
 
 
-${IBOM}: ${PCB}
+${IBOM}: ${PCB} ${IBOM_SCRIPT}
 	${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
 
 
