@@ -9,8 +9,7 @@
 # Tools & Tool Paths
 DIR=$(shell pwd)
 KICAD=kicad-cli
-#IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBom/InteractiveHtmlBom/generate_interactive_bom.py
-IBOM_SCRIPT=${DIR}/generate_interactive_bom.py
+IBOM_SCRIPT=generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
@@ -53,9 +52,6 @@ export PYTHONPATH=
 
 .PHONY: all
 all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
-
-${IBOM_SCRIPT}:
-	wget https://raw.githubusercontent.com/TheJigsApp/InteractiveHtmlBom/master/InteractiveHtmlBom/generate_interactive_bom.py -o $@
 
 .PHONY: no-drc
 no-drc: schematic BOM ibom step gerbers board fabzip
@@ -123,7 +119,7 @@ gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	${KICAD} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
 
 
-${IBOM}: ${PCB} ${IBOM_SCRIPT}
+${IBOM}: ${PCB}
 	${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
 
 
