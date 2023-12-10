@@ -118,9 +118,10 @@ gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
 	${KICAD} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
 
-
+# Screen size required for running headless 
+# https://github.com/openscopeproject/InteractiveHtmlBom/wiki/Tips-and-Tricks
 ${IBOM}: ${PCB}
-	${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
+	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
 
 
 ${FABZIP}: board
