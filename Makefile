@@ -7,13 +7,15 @@
 #
 # Tools & Tool Paths
 DIR=$(shell pwd)
-KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
+KICADCLI=kicad-cli
+#flatpak run --command=kicad-cli org.kicad.KiCad
 # kicad-cli
 IBOM_SCRIPT=generate_interactive_bom.py
+#IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBOM/generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
-PCBNEW_DO=pcbnew_do # Kiauto
+#PCBNEW_DO=pcbnew_do # Kiauto
 
 TMP=/tmp
 MANUFACTURING_DIR=${DIR}/fab
@@ -47,8 +49,6 @@ FABZIP=${DIR}/${PCBBASE}_${VERSION}.zip
 GENCAD=${DIR}/${PCBBASE}_${VERSION}.cad
 OUTLINE=${MECH_DIR}/board-outline.svg
 
-
-export PYTHONPATH=
 
 
 .PHONY: all
@@ -107,7 +107,7 @@ ${CENTROID_CSV}: ${PCB} ${ASSEMBLY_DIR}
 	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
 
 ${JLC_CENTROID}: ${CENTROID_CSV} ${ASSEMBLY_DIR}
-	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >> 
+	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >>
 	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > $@
 	tail --lines=+2 $< >> $@
 
@@ -122,7 +122,7 @@ gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
 	${KICADCLI} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
 
-# Screen size required for running headless 
+# Screen size required for running headless
 # https://github.com/openscopeproject/InteractiveHtmlBom/wiki/Tips-and-Tricks
 ${IBOM}: ${PCB}
 	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
@@ -130,7 +130,7 @@ ${IBOM}: ${PCB}
 
 ${FABZIP}: board
 	zip -rj $@ ${MANUFACTURING_DIR}/gerbers
-	
+
 
 # Board Outline
 ${OUTLINE}: ${PCB}

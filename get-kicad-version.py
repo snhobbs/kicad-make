@@ -2,6 +2,8 @@
 import sys
 
 import pcbnew
+
+
 def get_version(pcb):
     board = pcbnew.LoadBoard(pcb)
     title = board.GetTitleBlock()
