@@ -59,6 +59,9 @@ no-drc: schematic BOM ibom step gerbers board fabzip
 .PHONY: manufacturing
 manufacturing: ibom step drc gerbers board fabzip
 
+.PHONY: fabzip
+fabzip: ${FABZIP}
+
 clean:
 	-rm ${PDFSCH} ${XMLBOM} ${BOM} ${STEP} ${CENTROID_GERBER} ${CENTROID_CSV} ${JLC_CENTROID} ${IBOM} ${MANUFACTURING_DIR}/gerbers/*
 	-rm ${FABZIP} kicad-cli ${OUTLINE}
@@ -95,7 +98,7 @@ ${ASSEMBLY_DIR}: ${MANUFACTURING_DIR}
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB}
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
-	${KICAD} pcb export drill --excellon-units mm $< -o ./
+	${KICAD} pcb export drill --drill-origin plot --excellon-units mm $< -o ./
 	mv ${PCBBASE}.drl $@
 
 
