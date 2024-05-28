@@ -2,23 +2,23 @@
 # 	+ KiAuto : https://github.com/INTI-CMNB/KiAuto
 # 	+ KiCAD 7.0.0+
 # 	+ InteractiveHtmlBOM : https://github.com/openscopeproject/InteractiveHtmlBom
-#		+ KiKit: V 1.0.3+
 #
 #
 #
 # Tools & Tool Paths
 DIR=$(shell pwd)
-KICAD=kicad-cli
+KICADCLI=kicad-cli
+#flatpak run --command=kicad-cli org.kicad.KiCad
+# kicad-cli
 IBOM_SCRIPT=generate_interactive_bom.py
+#IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBOM/generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
 BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
-PCBNEW_DO=pcbnew_do # Kiauto
-KIKIT=kikit
+#PCBNEW_DO=pcbnew_do # Kiauto
 
 TMP=/tmp
 MANUFACTURING_DIR=${DIR}/fab
-DRC_RESULT=drc_result.rpt
 
 # Project Information
 PROJECT=PROJECTNAME
@@ -28,13 +28,16 @@ PCBBASE=$(basename $(notdir ${PCB}))
 SCHBASE=$(basename $(notdir ${SCH}))
 VERSION=A.B.X
 
+TIME=$(shell date +%s)
 ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
 PDFSCH=${DIR}/${SCHBASE}_${VERSION}.pdf
 LOG=${DIR}/log.log
 MECH_DIR=${DIR}/mechanical
-XMLBOM=${TMP}/${SCHBASE}_${VERSION}_BOM.xml
+XMLBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.xml
 BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
 LCSCBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_LCSC_BOM.csv
+ERC=${MANUFACTURING_DIR}/erc_${TIME}.rpt
+DRC=${MANUFACTURING_DIR}/drc_${TIME}.rpt
 
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
@@ -47,8 +50,6 @@ GENCAD=${DIR}/${PCBBASE}_${VERSION}.cad
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 
-export PYTHONPATH=
-
 
 .PHONY: all
 all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
@@ -57,7 +58,7 @@ all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
 no-drc: schematic BOM ibom step gerbers board fabzip
 
 .PHONY: manufacturing
-manufacturing: ibom step drc gerbers board fabzip
+manufacturing: erc ibom step drc gerbers board fabzip
 
 .PHONY: fabzip
 fabzip: ${FABZIP}
@@ -69,22 +70,25 @@ clean:
 	-rmdir 3D mechanical
 
 
-drc: ${PCB}
-	${KIKIT} drc run $<
-	#${PCBNEW_DO} run_drc $< ./ >> ${DIR}/log.log
+.PHONY: drc
+drc: ${DRC}
 
-erc: ${SCH}
-	${PCBNEW_DO} run_erc $< ./ >> ${DIR}/log.log
+${DRC}: ${PCB} ${MANUFACTURING_DIR}
+	${KICADCLI} pcb drc --exit-code-violations $< -o $@
+
+.PHONY: erc
+erc: ${ERC}
+
+${ERC}: ${SCH} ${MANUFACTURING_DIR}
+	${KICADCLI} sch erc --exit-code-violations $< -o $@
 
 # Generates schematic
 ${PDFSCH} : ${SCH}
-	${KICAD} sch export pdf --black-and-white $< -o $@
-
+	${KICADCLI} sch export pdf --black-and-white $< -o $@
 
 # Generate python-BOM
 ${XMLBOM}: ${SCH} ${TMP}
-	${KICAD} sch export python-bom $< -o $@
-
+	${KICADCLI} sch export python-bom $< -o $@
 
 ${BOM}: ${XMLBOM} ${ASSEMBLY_DIR}
 	${PYTHON} ${BOM_SCRIPT}  $<  $@ > $@
@@ -98,15 +102,15 @@ ${ASSEMBLY_DIR}: ${MANUFACTURING_DIR}
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB}
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
-	${KICAD} pcb export drill --drill-origin plot --excellon-units mm $< -o ./
+	${KICADCLI} pcb export drill --drill-origin plot --excellon-units mm $< -o ./
 	mv ${PCBBASE}.drl $@
 
 
 ${CENTROID_CSV}: ${PCB} ${ASSEMBLY_DIR}
-	${KICAD} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
+	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
 
 ${JLC_CENTROID}: ${CENTROID_CSV} ${ASSEMBLY_DIR}
-	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >> 
+	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >>
 	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > $@
 	tail --lines=+2 $< >> $@
 
@@ -114,14 +118,14 @@ ${MECH_DIR}:
 	mkdir -p ${MECH_DIR}
 
 ${STEP}: ${PCB} ${MECH_DIR}
-	${KICAD} pcb export step $< --drill-origin --subst-models -f -o $@
+	${KICADCLI} pcb export step $< --drill-origin --subst-models -f -o $@
 
 
 gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
-	${KICAD} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
+	${KICADCLI} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
 
-# Screen size required for running headless 
+# Screen size required for running headless
 # https://github.com/openscopeproject/InteractiveHtmlBom/wiki/Tips-and-Tricks
 ${IBOM}: ${PCB}
 	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
@@ -129,15 +133,15 @@ ${IBOM}: ${PCB}
 
 ${FABZIP}: board
 	zip -rj $@ ${MANUFACTURING_DIR}/gerbers
-	
+
 
 # Board Outline
 ${OUTLINE}: ${PCB}
-	${KICAD} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
+	${KICADCLI} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
 
 
 gencad: gerbers
-	${KICAD} pcb export gencad -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
+	${KICADCLI} pcb export gencad -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
 
 # Add board renders
 
@@ -164,6 +168,9 @@ schematic : ${PDFSCH}
 
 .PHONY: BOM
 BOM: ${BOM}
+
+.PHONY: XMLBOM
+XMLBOM: ${XMLBOM}
 
 .PHONY: fabzip
 fabzip: ${FABZIP}
