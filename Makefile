@@ -52,7 +52,7 @@ OUTLINE=${MECH_DIR}/board-outline.svg
 
 
 .PHONY: all
-all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing
+all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM manufacturing ${LCSCBOM}
 
 .PHONY: no-drc
 no-drc: schematic BOM ibom step gerbers board fabzip
@@ -92,6 +92,12 @@ ${XMLBOM}: ${SCH} ${TMP}
 
 ${BOM}: ${XMLBOM} ${ASSEMBLY_DIR}
 	${PYTHON} ${BOM_SCRIPT}  $<  $@ > $@
+
+${LCSCBOM}: ${ASSEMBLY_DIR} ${SCH}
+	${KICADCLI} sch export bom ${SCH} --fields="Reference,Value,Footprint,LCSC,\$${QUANTITY},\$${DNP}" --labels="Ref Des,Value,Footprint,JLCPCB Part #,QUANTITY,DNP" --group-by="LCSC,\$${DNP},Value,Footprint" --ref-range-delimiter="" -o $@
+
+.PHONY: LCSCBOM
+LCSCBOM: ${LCSCBOM}
 
 ${MANUFACTURING_DIR}:
 	mkdir -p $@
@@ -167,7 +173,7 @@ ibom: ${IBOM}
 schematic : ${PDFSCH}
 
 .PHONY: BOM
-BOM: ${BOM}
+BOM: ${BOM} ${LCSCBOM}
 
 .PHONY: XMLBOM
 XMLBOM: ${XMLBOM}
