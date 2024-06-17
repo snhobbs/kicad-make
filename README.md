@@ -27,6 +27,13 @@ this acts as an easy indication you have a version issue.
 
 ## Usage
 
+You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command. 
+The only usage requirements are:
+
++ All dependencies need to be on your path
++ make is called from the project directory
++ make finds the Makefile 
+
 ### Create a board revision
 This is the default target and generates everything.
 ```bash
