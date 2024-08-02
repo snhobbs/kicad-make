@@ -7,18 +7,19 @@
 #
 # Tools & Tool Paths
 DIR=$(shell pwd)
+OUTDIR=${DIR}
 KICADCLI=kicad-cli
 #flatpak run --command=kicad-cli org.kicad.KiCad
 # kicad-cli
-IBOM_SCRIPT=generate_interactive_bom.py
+IBOM_SCRIPT=generate_interactive_bom
 #IBOM_SCRIPT=${HOME}/tools/InteractiveHtmlBOM/generate_interactive_bom.py
 PYTHON="/usr/bin/python3"
 KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
-BOM_SCRIPT="/usr/share/kicad/plugins/bom_csv_grouped_by_value.py"
+BOM_SCRIPT=/usr/share/kicad/plugins/bom_csv_grouped_by_value.py
 #PCBNEW_DO=pcbnew_do # Kiauto
 
 TMP=/tmp
-MANUFACTURING_DIR=${DIR}/fab
+MANUFACTURING_DIR=${OUTDIR}/fab
 
 # Project Information
 PROJECT=PROJECTNAME
@@ -30,9 +31,9 @@ VERSION=A.B.X
 
 TIME=$(shell date +%s)
 ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
-PDFSCH=${DIR}/${SCHBASE}_${VERSION}.pdf
-LOG=${DIR}/log.log
-MECH_DIR=${DIR}/mechanical
+PDFSCH=${OUTDIR}/${SCHBASE}_${VERSION}.pdf
+LOG=${OUTDIR}/log.log
+MECH_DIR=${OUTDIR}/mechanical
 XMLBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.xml
 BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
 LCSCBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_LCSC_BOM.csv
@@ -44,9 +45,9 @@ STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 CENTROID_CSV=${ASSEMBLY_DIR}/centroid.csv
 CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
 JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
-IBOM=${DIR}/${PCBBASE}_${VERSION}_interactive_bom.html
-FABZIP=${DIR}/${PCBBASE}_${VERSION}.zip
-GENCAD=${DIR}/${PCBBASE}_${VERSION}.cad
+IBOM=${OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
+FABZIP=${OUTDIR}/${PCBBASE}_${VERSION}.zip
+GENCAD=${OUTDIR}/${PCBBASE}_${VERSION}.cad
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 
@@ -134,7 +135,7 @@ gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 # Screen size required for running headless
 # https://github.com/openscopeproject/InteractiveHtmlBom/wiki/Tips-and-Tricks
 ${IBOM}: ${PCB}
-	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format %f_%r_interactive_bom
+	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format $(basename $@ .html)
 
 
 ${FABZIP}: board
