@@ -65,3 +65,9 @@ project.kicad_pro   project.kicad_sch   project.kicad_pcb                   proj
 project_0.1.X.zip   project_0.1.X.pdf   project_0.1.X_interactive_bom.html  fab
 mechanical
 ```
+
+# FIXME
++ Add gerber PDF
+    + pypdf
++ Add mechanical drawing
++ Add renders of board top and bottom
