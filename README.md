@@ -2,6 +2,30 @@
 
 Makefile for building a board revision. I've used the generated files with JLCPCB, Screaming Circuits, and OSHPark.
 
+## Setup
+At a minimum you'll need the kicad-cli which is available with KiCAD 7+ some of the features here are only available
+in v8+. Depending on how you installed kicad this could be a whole bunch of places. Find it and add the location
+to your path.
+
+### Secondary Tools
+For python tools you'll also need to set the PYTHONPATH to find the pcbnew.py library.
+For Ubuntu when using aptitude it should show up in /usr/lib/python3/dist-packages.
+I add the following to my .zshrc / .bashrc.
+
+```sh
+PCBNEW_DIR=/usr/lib/python3/dist-packages
+export PYTHONPATH=${PYTHONPATH}:${PCBNEW_DIR}
+```
+
+Install the subdirectories in the same python environment. If these outputs are not 
+needed then remove the related lines.
+
+```sh
+git submodule update --init --recursive
+cd libs/Board2Pdf/ && pip install .
+cd libs/InteractiveHtmlBom/ && pip install .
+```
+
 ## Features
 + Runs DRC & ERC. If these do not pass than the manufacturing files won't be generated.
 + Includes both generic and JLCPCB targeted outputs
@@ -14,6 +38,7 @@ Makefile for building a board revision. I've used the generated files with JLCPC
 + STEP model of board
 + centroid w/ KiCAD and JLCPCB format
 + Full BOM and JLCPCB version
++ PDF gerber report with board2pdf
 
 ## Notes
 ### Semantic Versioning
@@ -67,7 +92,7 @@ mechanical
 ```
 
 # FIXME
-+ Add gerber PDF
-    + pypdf
 + Add mechanical drawing
 + Add renders of board top and bottom
++ Add testpoint report
++ Add check of critical parts placement

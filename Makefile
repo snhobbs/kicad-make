@@ -1,32 +1,34 @@
-# Requires:
-# 	+ KiCAD 8.0.0+
-# 	+ InteractiveHtmlBOM : https://github.com/openscopeproject/InteractiveHtmlBom
-# 		+ Improved Packaging Version: https://github.com/snhobbs/InteractiveHtmlBom
-
 # Project Information. Call this make file with those values set
+#===============================================================
 PROJECT=PROJECTNAME
 VERSION=A.B.X
+#===============================================================
 
+# Values you may want to change
+#===============================================================
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-
-# Tools & Tool Paths
 DIR=$(abspath $(shell pwd))
 OUTDIR=$(abspath ${DIR})
-_DIR=$(abspath ${DIR})
-_OUTDIR=$(abspath ${OUTDIR})
+#===============================================================
 
+
+# Tools & Tool Paths, change these if your path is different
+#===============================================================
 KICADCLI=kicad-cli
+# kicad-cli
 #KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
-#KICADCLI=flatpak run --share=network --filesystem=home:rw --command=/app/bin/kicad-cli -- org.kicad.KiCad
 IBOM_SCRIPT=generate_interactive_bom
 BOARD2PDF=board2pdf
 PYTHON="/usr/bin/python3"
-KICAD_PYTHON_PATH=/usr/lib/python3/dist-packages/_pcbnew.so
+KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
+#KICAD_PYTHON_PATH=/usr/lib/python3/dist-packages/_pcbnew.so
 BOM_SCRIPT=/usr/share/kicad/plugins/bom_csv_grouped_by_value.py
-#BOM_SCRIPT=/home/simon/tools/kicad-source-mirror/eeschema/python_scripts/bom_csv_grouped_by_value.py
-LOGS_DIR=${_OUTDIR}/logs
-TMP=/tmp
+#===============================================================
+
+_DIR=$(abspath ${DIR})
+_OUTDIR=$(abspath ${OUTDIR})
 MANUFACTURING_DIR=${_OUTDIR}/fab
+LOGS_DIR=${_OUTDIR}/logs
 
 SCH=${_DIR}/${PROJECT}.kicad_sch
 PCB=${_DIR}/${PROJECT}.kicad_pcb
@@ -69,6 +71,7 @@ GENCAD=${_OUTDIR}/${PCBBASE}_${VERSION}.cad
 MECH_DIR=${_OUTDIR}/mechanical
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
+
 
 .PHONY: all
 all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM gerberpdf manufacturing ${LCSCBOM}
@@ -126,6 +129,7 @@ ${DRILL}: ${PCB}
 	${KICADCLI} pcb export drill --drill-origin plot --excellon-units mm $< -o ./
 	mv ${PCBBASE}.drl $@
 
+
 ${CENTROID_CSV}: ${PCB} ${ASSEMBLY_DIR}
 	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
 
@@ -140,6 +144,7 @@ ${MECH_DIR}:
 ${STEP}: ${PCB} ${MECH_DIR}
 	${KICADCLI} pcb export step $< --drill-origin --subst-models -f -o $@
 
+
 gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
 	mkdir -p ${MANUFACTURING_DIR}/gerbers
 	${KICADCLI} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
@@ -153,6 +158,7 @@ ${IBOM}: ${PCB}
 
 ${FABZIP}: board
 	zip -rj $@ ${MANUFACTURING_DIR}/gerbers
+
 
 # Board Outline
 ${OUTLINE}: ${PCB}
