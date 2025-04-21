@@ -1,6 +1,3 @@
 [submodule "libs/InteractiveHtmlBom"]
 	path = libs/InteractiveHtmlBom
 	url = https://github.com/openscopeproject/InteractiveHtmlBom.git
-[submodule "libs/Board2Pdf"]
-	path = libs/Board2Pdf
-	url = https://gitlab.com/dennevi/Board2Pdf/
