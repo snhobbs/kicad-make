@@ -36,7 +36,6 @@ PCBBASE=$(basename $(notdir ${PCB}))
 SCHBASE=$(basename $(notdir ${SCH}))
 
 TIME=$(shell date +%s)
-
 ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
 LOG=${_DIR}/log.log
 MECH_DIR=${_OUTDIR}/mechanical
@@ -72,23 +71,33 @@ MECH_DIR=${_OUTDIR}/mechanical
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
 
-
-.PHONY: all
-all: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM gerberpdf manufacturing ${LCSCBOM}
+.PHONY: release
+release: ${MECH_DIR} ${ASSEMBLY_DIR} manufacturing fabzip 
 
 .PHONY: manufacturing
-manufacturing: erc ibom gerberpdf step drc gerbers board fabzip ipc2581
+manufacturing: ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step erc drc gerbers board ipc2581
 
 .PHONY: no-drc
-no-drc: ${MECH_DIR} ${ASSEMBLY_DIR} schematic BOM gerberpdf ibom gerberpdf step gerbers board fabzip ipc2581 ${LCSCBOM}
+no-drc: ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581 ${FABZIP}
 
 clean:
-	-rm ${PDFSCH} ${XMLBOM} ${BOM} ${STEP} ${CENTROID_GERBER} ${CENTROID_CSV} ${JLC_CENTROID} ${IBOM} ${MANUFACTURING_DIR}/gerbers/*
-	-rm ${FABZIP} ${OUTLINE}
+	-rm ${GERBERPDF}
+	-rm ${PDFSCH}
+	-rm ${XMLBOM}
+	-rm ${BOM}
+	-rm ${STEP}
+	-rm ${CENTROID_GERBER}
+	-rm ${CENTROID_CSV}
+	-rm ${JLC_CENTROID}
+	-rm ${IBOM}
+	-rm ${MANUFACTURING_DIR}/gerbers/*
+	-rm ${FABZIP}
+	-rm ${OUTLINE}
 	-rm -r ${LOGS_DIR}
 	-rm -r ${LCSCBOM}
 	-rmdir ${MANUFACTURING_DIR}/gerbers ${MANUFACTURING_DIR}/assembly ${MANUFACTURING_DIR}
 	-rmdir mechanical
+	-rmdir plots
 
 
 .PHONY: ${DRC}
@@ -105,7 +114,7 @@ ${PDFSCH} : ${SCH}
 	${KICADCLI} sch export pdf ${SCHEMATIC_FLAGS} $< -o $@
 
 # Generate python-BOM
-${XMLBOM}: ${SCH} ${TMP}
+${XMLBOM}: ${SCH} ${TMP} ${ASSEMBLY_DIR}
 	${KICADCLI} sch export python-bom $< -o $@
 
 ${BOM}: ${XMLBOM} ${ASSEMBLY_DIR}
@@ -195,8 +204,8 @@ ibom: ${IBOM}
 .PHONY: schematic
 schematic : ${PDFSCH}
 
-.PHONY: BOM
-BOM: ${BOM} ${LCSCBOM}
+.PHONY: boms
+boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
 
 .PHONY: XMLBOM
 XMLBOM: ${XMLBOM}
@@ -205,10 +214,10 @@ XMLBOM: ${XMLBOM}
 fabzip: ${FABZIP}
 
 .PHONY: board
-board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} ${ASSEMBLY_BOM} ${OUTLINE}
+board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} boms ${OUTLINE}
 
 .PHONY: setup
-setup: ${ASSEMBLY_BOM} ${BOM} schematic ibom step
+setup: boms schematic ibom step
 
 .PHONY: gerberpdf
 gerberpdf: ${GERBERPDF}
