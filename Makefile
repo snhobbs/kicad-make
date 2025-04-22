@@ -72,6 +72,7 @@ JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
 IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
+TESTPOINT_REPORT=${_OUTDIR}/testpoints.csv
 
 # MECHANICAL
 MECH_DIR=${_OUTDIR}/mechanical
@@ -84,7 +85,7 @@ release: ${MECH_DIR} ${ASSEMBLY_DIR} manufacturing fabzip
 .PHONY: release manufacturing no-drc clean
 release: erc drc manufacturing fabzip
 
-manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581
+manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581 testpoints
 
 no-drc: manufacturing fabzip
 
@@ -108,6 +109,9 @@ clean:
 	-rmdir ${MECH_DIR}
 	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${GERBER_PDF_DIR} ${LOGS_DIR}
 
+
+${TESTPOINT_REPORT}: ${PCB} | ${_OUTDIR}
+	kicad_testpoints by-fab-setting --pcb "$<" --out "$@"
 
 # Move the log file to the final location if the command succeeds so it doesn't rerun
 ${DRC}: ${PCB} ${ERC} | ${LOGS_DIR}
@@ -220,4 +224,6 @@ erc: ${ERC}
 
 drc: ${DRC}
 
-.PHONY: gerbers ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board setup gerberpdf centroid erc drc
+testpoints: ${TESTPOINT_REPORT}
+
+.PHONY: gerbers ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board setup gerberpdf centroid erc drc testpoints
