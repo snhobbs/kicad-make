@@ -168,7 +168,7 @@ ${IBOM}: ${PCB} | ${ASSEMBLY_DIR}
 	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} "$<" \
 		--dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" \
 		--include-nets --normalize-field-case --no-browser --dest-dir ./ \
-		--name-format "$(basename $@ .html)"
+		--name-format "$(basename $@ )"
 
 ${FABZIP}: ${GERBER_DIR}
 	zip -rj "$@" "$<"
