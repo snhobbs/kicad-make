@@ -4,3 +4,6 @@
 [submodule "libs/Board2Pdf"]
 	path = libs/Board2Pdf
 	url = https://gitlab.com/dennevi/Board2Pdf/
+[submodule "kicad-testpoints"]
+	path = libs/kicad-testpoints
+	url = https://github.com/snhobbs/kicad-testpoints
