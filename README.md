@@ -1,11 +1,9 @@
 # kicad-make
-
-Makefile for building a board revision. I've used the generated files with JLCPCB, Screaming Circuits, and OSHPark.
+Makefile to create releases of KiCAD designs. This project has a branch for each version of versions of KiCAD that have the CLI tool (v7, v8, & v9 currently).
 
 ## Setup
-At a minimum you'll need the kicad-cli which is available with KiCAD 7+ some of the features here are only available
-in v8+. Depending on how you installed kicad this could be a whole bunch of places. Find it and add the location
-to your path.
+At a minimum you'll need the kicad-cli which is available with KiCAD 7+. Choose the correct release or branch for the version you're using.
+Make sure kicad-cli is on your path or edit the makefile so KICAD-CLI is set correctly.
 
 ### Secondary Tools
 For python tools you'll also need to set the PYTHONPATH to find the pcbnew.py library.
@@ -22,11 +20,10 @@ needed then remove the related lines.
 
 ```sh
 git submodule update --init --recursive
-cd libs/Board2Pdf/ && pip install .
 cd libs/InteractiveHtmlBom/ && pip install .
 ```
 
-## Features
+## Features (v9)
 + Runs DRC & ERC. If these do not pass than the manufacturing files won't be generated.
 + Includes both generic and JLCPCB targeted outputs
 
@@ -38,20 +35,18 @@ cd libs/InteractiveHtmlBom/ && pip install .
 + STEP model of board
 + centroid w/ KiCAD and JLCPCB format
 + Full BOM and JLCPCB version
-+ PDF gerber report with board2pdf
++ PDF gerber report
++ GenCAD
++ ODB++
++ IPC2581
++ Renders of the board
 
 ## Notes
 ### Semantic Versioning
 We encourage using semantic numbering for board revisions. See the blog post <https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/> for the versioning scheme.
 As rolling the patch number ({Major}.{Minor}.{Patch}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board revision. You can use any version number you want though.
 
-### IBOM Version Number
-The IBOM script uses the version number in the PCB title block in the filename. Note that this
-may be different than the declared version. We left this as your version should be the same and
-this acts as an easy indication you have a version issue.
-
 ## Usage
-
 You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command. 
 The only usage requirements are:
 
@@ -92,7 +87,4 @@ mechanical
 ```
 
 # FIXME
-+ Add mechanical drawing
-+ Add renders of board top and bottom
-+ Add testpoint report
 + Add check of critical parts placement

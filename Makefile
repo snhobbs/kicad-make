@@ -79,6 +79,7 @@ FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
 GENCAD=${_OUTDIR}/GENCAD_${PCBBASE}_${VERSION}.cad
 ODB=${_OUTDIR}/ODB_${PCBBASE}_${VERSION}.zip
 IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
+TESTPOINT_REPORT=${_OUTDIR}/testpoints.csv
 
 # MECHANICAL
 MECH_DIR=${_OUTDIR}/mechanical
@@ -153,6 +154,8 @@ clean:
 	-rmdir ${MECH_DIR}
 	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${GERBER_PDF_DIR} ${LOGS_DIR}
 
+${TESTPOINT_REPORT}: ${PCB} | ${_OUTDIR}
+	kicad_testpoints by-fab-setting --pcb "$<" --out "$@"
 
 # Move the log file to the final location if the command succeeds so it doesn't rerun
 ${DRC}: ${PCB} ${ERC} | ${LOGS_DIR}

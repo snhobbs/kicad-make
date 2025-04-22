@@ -1,3 +1,6 @@
 [submodule "libs/InteractiveHtmlBom"]
 	path = libs/InteractiveHtmlBom
 	url = https://github.com/openscopeproject/InteractiveHtmlBom.git
+[submodule "libs/kicad-testpoints"]
+	path = libs/kicad-testpoints
+	url = https://github.com/snhobbs/kicad-testpoints
