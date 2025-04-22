@@ -1,8 +1,13 @@
 # Project Information. Call this make file with those values set
 #===============================================================
-PROJECT=PROJECTNAME
-VERSION=A.B.X
+ifndef PROJECT
+$(error PROJECT is not set)
+endif
+ifndef VERSION
+$(error VERSION is not set)
+endif
 #===============================================================
+
 
 # Values you may want to change
 #===============================================================
@@ -14,36 +19,45 @@ OUTDIR=$(abspath ${DIR})
 
 # Tools & Tool Paths, change these if your path is different
 #===============================================================
-KICADCLI=kicad-cli
 # kicad-cli
-#KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
+KICADCLI=kicad-cli
+#	flatpak
+#	KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
+#	snap
+#	KICADCLI=/snap/bin/kicad.kicad-cli
+#	docker
+#KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:8.0 kicad-cli
 IBOM_SCRIPT=generate_interactive_bom
-BOARD2PDF=board2pdf
-PYTHON="/usr/bin/python3"
-KICAD_PYTHON_PATH=/usr/lib/kicad/lib/python3/dist-packages
-#KICAD_PYTHON_PATH=/usr/lib/python3/dist-packages/_pcbnew.so
-BOM_SCRIPT=/usr/share/kicad/plugins/bom_csv_grouped_by_value.py
+BOARD2PDF_SCRIPT=board2pdf
+#===============================================================
+
+SCH_DRAWING_SHEET=S{ROOT_DIR}/SchDrawingSheet.kicad_wks
+PCB_DRAWING_SHEET=${SCH_DRAWING_SHEET}
 #===============================================================
 
 _DIR=$(abspath ${DIR})
 _OUTDIR=$(abspath ${OUTDIR})
 MANUFACTURING_DIR=${_OUTDIR}/fab
+ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
+GERBER_DIR=${MANUFACTURING_DIR}/gerbers
 LOGS_DIR=${_OUTDIR}/logs
+MECH_DIR=${_OUTDIR}/mechanical
+GERBERPDF_INI=${ROOT_DIR}/board2pdf.config.ini
+
+TIME=$(shell date +%s)
+COMMA := ,
+SPACE := $(empty) $(empty)
 
 SCH=${_DIR}/${PROJECT}.kicad_sch
 PCB=${_DIR}/${PROJECT}.kicad_pcb
 PCBBASE=$(basename $(notdir ${PCB}))
 SCHBASE=$(basename $(notdir ${SCH}))
 
-TIME=$(shell date +%s)
-ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
-LOG=${_DIR}/log.log
-MECH_DIR=${_OUTDIR}/mechanical
-XMLBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.xml
 BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
 LCSCBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_LCSC_BOM.csv
 ERC=${LOGS_DIR}/erc.rpt
 DRC=${LOGS_DIR}/drc.rpt
+
 # Visualizations
 PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}.pdf
 IBOM=${_OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
@@ -54,17 +68,10 @@ CENTROID_CSV=${ASSEMBLY_DIR}/centroid.csv
 CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
 JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
 
-IBOM=${_OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
-FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
-GENCAD=${_OUTDIR}/${PCBBASE}_${VERSION}.cad
-OUTLINE=${MECH_DIR}/board-outline.svg
-
 # Manufacturing Files
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
-
-# FIXME GENCAD cannot be exported with the command line
-GENCAD=${_OUTDIR}/${PCBBASE}_${VERSION}.cad
+IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
 
 # MECHANICAL
 MECH_DIR=${_OUTDIR}/mechanical
@@ -72,155 +79,145 @@ STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 .PHONY: release
-release: ${MECH_DIR} ${ASSEMBLY_DIR} manufacturing fabzip 
+release: ${MECH_DIR} ${ASSEMBLY_DIR} manufacturing fabzip
 
-.PHONY: manufacturing
-manufacturing: ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step erc drc gerbers board ipc2581
+.PHONY: release manufacturing no-drc clean
+release: erc drc manufacturing fabzip
 
-.PHONY: no-drc
-no-drc: ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581 ${FABZIP}
+manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581
+
+no-drc: manufacturing fabzip
 
 clean:
 	-rm ${GERBERPDF}
 	-rm ${PDFSCH}
-	-rm ${XMLBOM}
 	-rm ${BOM}
 	-rm ${STEP}
 	-rm ${CENTROID_GERBER}
 	-rm ${CENTROID_CSV}
 	-rm ${JLC_CENTROID}
 	-rm ${IBOM}
-	-rm ${MANUFACTURING_DIR}/gerbers/*
+	-rm ${GERBER_DIR}/*.gbr
 	-rm ${FABZIP}
 	-rm ${OUTLINE}
-	-rm -r ${LOGS_DIR}
-	-rm -r ${LCSCBOM}
-	-rmdir ${MANUFACTURING_DIR}/gerbers ${MANUFACTURING_DIR}/assembly ${MANUFACTURING_DIR}
-	-rmdir mechanical
-	-rmdir plots
+	-rm ${LOGS_DIR}/*.log
+	-rm ${LOGS_DIR}/*.rpt
+	-rm ${LCSCBOM}
+	-rm ${IPC2581}
+	-rm -r ${GERBER_DIR}
+	-rmdir ${MECH_DIR}
+	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${GERBER_PDF_DIR} ${LOGS_DIR}
 
 
-.PHONY: ${DRC}
-${DRC}: ${PCB} ${LOGS_DIR} ${ERC}
-	${KICADCLI} pcb drc --exit-code-violations $< -o $@
+# Move the log file to the final location if the command succeeds so it doesn't rerun
+${DRC}: ${PCB} ${ERC} | ${LOGS_DIR}
+	${KICADCLI} pcb drc --exit-code-violations "$<" -o ${LOGS_DIR}/drc-out.log
+	mv ${LOGS_DIR}/drc-out.log "$@"
 
-.PHONY: ${ERC}
-${ERC}: ${SCH} ${LOGS_DIR}
-	${KICADCLI} sch erc --exit-code-violations $< -o $@
+${ERC}: ${SCH} | ${LOGS_DIR}
+	${KICADCLI} sch erc --exit-code-violations "$<" -o ${LOGS_DIR}/erc-out.log
+	mv ${LOGS_DIR}/erc-out.log "$@"
 
-SCHEMATIC_FLAGS=--black-and-white --drawing-sheet /home/simon/EOI/heoDocs/Templates/Kicad_A4.kicad_wks
 # Generates schematic
-${PDFSCH} : ${SCH}
-	${KICADCLI} sch export pdf ${SCHEMATIC_FLAGS} $< -o $@
+${PDFSCH} : ${SCH} | ${_OUTDIR}
+	${KICADCLI} sch export pdf --black-and-white --drawing-sheet ${SCH_DRAWING_SHEET} "$<" -o "$@"
 
-# Generate python-BOM
-${XMLBOM}: ${SCH} ${TMP} ${ASSEMBLY_DIR}
-	${KICADCLI} sch export python-bom $< -o $@
+${BOM}: ${SCH} | ${ASSEMBLY_DIR}
+	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},MPN,LCSC,Notes" --group-by="\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
 
-${BOM}: ${XMLBOM} ${ASSEMBLY_DIR}
-	${PYTHON} ${BOM_SCRIPT}  $<  $@ > $@
+${LCSCBOM}: ${SCH} | ${ASSEMBLY_DIR}
+	${KICADCLI} sch export bom "$<" --fields="Reference,Value,Footprint,LCSC,\$${QUANTITY},\$${DNP}" --labels="Ref Des,Value,Footprint,JLCPCB Part #,QUANTITY,DNP" --group-by="LCSC,\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
 
-${LCSCBOM}: ${ASSEMBLY_DIR} ${SCH}
-	${KICADCLI} sch export bom ${SCH} --fields="Reference,Value,Footprint,LCSC,\$${QUANTITY},\$${DNP}" --labels="Ref Des,Value,Footprint,JLCPCB Part #,QUANTITY,DNP" --group-by="LCSC,\$${DNP},Value,Footprint" --ref-range-delimiter="" -o $@
+${LOGS_DIR}: | ${_OUTDIR}
+	mkdir -p "$@"
 
-${LOGS_DIR}: ${_OUTDIR}
-	mkdir -p $@
+${MANUFACTURING_DIR}: | ${_OUTDIR}
+	mkdir -p "$@"
 
-${MANUFACTURING_DIR}:
-	mkdir -p $@
+${ASSEMBLY_DIR}: | ${MANUFACTURING_DIR}
+	mkdir -p "$@"
 
-${ASSEMBLY_DIR}: ${MANUFACTURING_DIR}
-	mkdir -p $@
+${GERBER_DIR}: | ${MANUFACTURING_DIR}
+	mkdir -p "$@"
+
+${MECH_DIR}: | ${MANUFACTURING_DIR}
+	mkdir -p "$@"
+
+${_OUTDIR}:
+	mkdir -p "$@"
 
 # Complains about output needing to be a directory, work around this
-${DRILL}: ${PCB}
-	mkdir -p ${MANUFACTURING_DIR}/gerbers
-	${KICADCLI} pcb export drill --drill-origin plot --excellon-units mm $< -o ./
-	mv ${PCBBASE}.drl $@
+${DRILL}: ${PCB} | ${GERBER_DIR}
+	${KICADCLI} pcb export drill --drill-origin plot --excellon-units mm "$<" -o ${GERBER_DIR}
+	mv ${GERBER_DIR}/${PCBBASE}.drl "$@"
 
+${CENTROID_CSV}: ${PCB} | ${ASSEMBLY_DIR}
+	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm "$<" -o "$@"
 
-${CENTROID_CSV}: ${PCB} ${ASSEMBLY_DIR}
-	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm $< -o $@
-
-${JLC_CENTROID}: ${CENTROID_CSV} ${ASSEMBLY_DIR}
+${JLC_CENTROID}: ${CENTROID_CSV} | ${ASSEMBLY_DIR}
 	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >>
-	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > $@
-	tail --lines=+2 $< >> $@
+	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > "$@"
+	tail --lines=+2 "$<" >> "$@"
 
-${MECH_DIR}:
-	mkdir -p ${MECH_DIR}
-
-${STEP}: ${PCB} ${MECH_DIR}
-	${KICADCLI} pcb export step $< --drill-origin --subst-models -f -o $@
-
-
-gerbers: ${PCB} ${MANUFACTURING_DIR}#drc
-	mkdir -p ${MANUFACTURING_DIR}/gerbers
-	${KICADCLI} pcb export gerbers --subtract-soldermask --use-drill-file-origin $< -o ${MANUFACTURING_DIR}/gerbers
+${STEP}: ${PCB} | ${MECH_DIR}
+	${KICADCLI} pcb export step "$<" --drill-origin --subst-models -f -o "$@"
 
 # Screen size required for running headless
 # https://github.com/openscopeproject/InteractiveHtmlBom/wiki/Tips-and-Tricks
-# NOTE: The version in this file is taken from the PCB title block and may not match
-# the delared version. These need to be adjusted manually.
-${IBOM}: ${PCB}
-	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} $< --dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" --include-nets --normalize-field-case --no-browser --dest-dir ./ --name-format $(basename $@ .html)
+${IBOM}: ${PCB} | ${ASSEMBLY_DIR}
+	xvfb-run --auto-servernum --server-args "-screen 0 1024x768x24" ${IBOM_SCRIPT} "$<" \
+		--dnp-field DNP --group-fields "Value,Footprint" --blacklist "X1,MH*" \
+		--include-nets --normalize-field-case --no-browser --dest-dir ./ \
+		--name-format "$(basename $@ .html)"
 
-${FABZIP}: board
-	zip -rj $@ ${MANUFACTURING_DIR}/gerbers
+${FABZIP}: ${GERBER_DIR}
+	zip -rj "$@" "$<"
 
+${OUTLINE}: ${PCB} | ${MECH_DIR}
+	${KICADCLI} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet "$<" -o "$@"
 
-# Board Outline
-${OUTLINE}: ${PCB}
-	${KICADCLI} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet $< -o $@
+${GERBERPDF}: ${PCB} | ${_OUTDIR}
+	${BOARD2PDF_SCRIPT} "$<" --output "$@" --ini ${GERBERPDF_INI}
 
-${GERBERPDF}: ${PCB}
-	${BOARD2PDF} $< --output $@ --ini ${ROOT_DIR}/board2pdf.config.ini 
+${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
+	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) --background transparent --quality high "$<" -o "$@"
 
-.PHONY: ipc2581
-ipc2581: ${PCB}
-	${KICADCLI} pcb export ipc2581 $<
+${IPC2581}: ${PCB} | ${_OUTDIR}
+	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
 
-.PHONY: fabzip
+gerbers: ${PCB} | ${GERBER_DIR}
+	${KICADCLI} pcb export gerbers --use-drill-file-origin "$<" -o ${GERBER_DIR}
+
+ipc2581: ${IPC2581}
+
 fabzip: ${FABZIP}
 
-.PHONY: drc
 drc: ${DRC}
 
-.PHONY: erc
 erc: ${ERC}
 
-.PHONY: LCSCBOM
 LCSCBOM: ${LCSCBOM}
 
-.PHONY: zip
 zip: ${FABZIP}
 
-.PHONY: step
 step: ${STEP}
 
-.PHONY: ibom
 ibom: ${IBOM}
 
-.PHONY: schematic
-schematic : ${PDFSCH}
+schematic: ${PDFSCH}
 
-.PHONY: boms
 boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
 
-.PHONY: XMLBOM
-XMLBOM: ${XMLBOM}
-
-.PHONY: fabzip
-fabzip: ${FABZIP}
-
-.PHONY: board
 board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} boms ${OUTLINE}
 
-.PHONY: setup
 setup: boms schematic ibom step
 
-.PHONY: gerberpdf
 gerberpdf: ${GERBERPDF}
 
-.PHONY: centroid
 centroid: ${CENTROID} ${JLC_CENTROID}
+
+erc: ${ERC}
+
+drc: ${DRC}
+
+.PHONY: gerbers ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board setup gerberpdf centroid erc drc
