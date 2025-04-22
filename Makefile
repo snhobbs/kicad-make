@@ -30,7 +30,7 @@ KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm
 IBOM_SCRIPT=generate_interactive_bom
 #===============================================================
 
-SCH_DRAWING_SHEET={ROOT_DIR}/SchDrawingSheet.kicad_wks
+SCH_DRAWING_SHEET=${ROOT_DIR}/SchDrawingSheet.kicad_wks
 PCB_DRAWING_SHEET=${SCH_DRAWING_SHEET}
 #===============================================================
 
@@ -44,8 +44,8 @@ MECH_DIR=${_OUTDIR}/mechanical
 GERBER_PDF_DIR=${_OUTDIR}/gerberpdf
 
 TIME=$(shell date +%s)
-COMMA := ,
-SPACE := $(empty) $(empty)
+COMMA:= ,
+SPACE:= $(empty) $(empty)
 
 SCH=${_DIR}/${PROJECT}.kicad_sch
 PCB=${_DIR}/${PROJECT}.kicad_pcb
@@ -61,7 +61,7 @@ DRC=${LOGS_DIR}/drc.rpt
 PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}.pdf
 IBOM=${_OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
 GERBERPDF=${_OUTDIR}/${PCBBASE}_${VERSION}_gerbers.pdf
-RENDERS := ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_TOP.png \
+RENDERS:= ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_TOP.png \
 		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_BOTTOM.png \
 		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_LEFT.png \
 		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_RIGHT.png \
@@ -86,7 +86,7 @@ STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 # GerberPDF
-PDF_GERBER_LAYERS := \
+PDF_GERBER_LAYERS:= \
 	User.Drawings \
 	User.Comments \
 	Edge.Cuts \
@@ -118,8 +118,8 @@ PDF_GERBER_LAYERS := \
 	Base \
 	Outline
 
-PDF_GERBER_LAYERS_CSV := $(subst $(SPACE),$(COMMA),$(PDF_GERBER_LAYERS))
-PDF_GERBER_FILES := $(foreach f,${PDF_GERBER_LAYERS},${GERBER_PDF_DIR}/${PCBBASE}-$(subst .,_,$(f)).pdf)
+PDF_GERBER_LAYERS_CSV:= $(subst $(SPACE),$(COMMA),$(PDF_GERBER_LAYERS))
+PDF_GERBER_FILES:= $(foreach f,${PDF_GERBER_LAYERS},${GERBER_PDF_DIR}/${PCBBASE}-$(subst .,_,$(f)).pdf)
 
 .PHONY: release manufacturing no-drc clean
 release: erc drc manufacturing fabzip
@@ -164,7 +164,7 @@ ${ERC}: ${SCH} | ${LOGS_DIR}
 	mv ${LOGS_DIR}/erc-out.log "$@"
 
 # Generates schematic
-${PDFSCH} : ${SCH} | ${_OUTDIR}
+${PDFSCH}: ${SCH} | ${_OUTDIR}
 	${KICADCLI} sch export pdf --black-and-white --drawing-sheet ${SCH_DRAWING_SHEET} "$<" -o "$@"
 
 ${BOM}: ${SCH} | ${ASSEMBLY_DIR}
@@ -275,7 +275,7 @@ step: ${STEP}
 
 ibom: ${IBOM}
 
-schematic : ${PDFSCH}
+schematic: ${PDFSCH}
 
 boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
 
