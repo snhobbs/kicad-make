@@ -72,7 +72,8 @@ JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
 IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
-TESTPOINT_REPORT=${_OUTDIR}/testpoints.csv
+TESTPOINT_REPORT=${_OUTDIR}/testpoints_${PCBBASE}_${VERSION}.csv
+NETLIST=${_OUTDIR}/netlist_${PCBBASE}_${VERSION}.csv
 
 # MECHANICAL
 MECH_DIR=${_OUTDIR}/mechanical
@@ -86,6 +87,7 @@ release: ${MECH_DIR} ${ASSEMBLY_DIR} manufacturing fabzip
 release: erc drc manufacturing fabzip
 
 manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581 testpoints
+	echo "\n\n Manufacturing Files Exported \n\n"
 
 no-drc: manufacturing fabzip
 
