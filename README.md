@@ -45,11 +45,6 @@ cd libs/InteractiveHtmlBom/ && pip install .
 We encourage using semantic numbering for board revisions. See the blog post <https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/> for the versioning scheme.
 As rolling the patch number ({Major}.{Minor}.{Patch}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board revision. You can use any version number you want though.
 
-### IBOM Version Number
-The IBOM script uses the version number in the PCB title block in the filename. Note that this
-may be different than the declared version. We left this as your version should be the same and
-this acts as an easy indication you have a version issue.
-
 ## Usage
 
 You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command. 
