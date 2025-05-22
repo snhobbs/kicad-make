@@ -3,9 +3,6 @@
 ifndef PROJECT
 $(error PROJECT is not set)
 endif
-ifndef VERSION
-$(error VERSION is not set)
-endif
 #===============================================================
 
 
@@ -15,6 +12,10 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 DIR=$(abspath $(shell pwd))
 OUTDIR=$(abspath ${DIR})
 #===============================================================
+
+ifndef VERSION
+	VERSION="$(shell cd $(DIR) && git show --pretty='%h' | head --lines=1)"
+endif
 
 
 # Tools & Tool Paths, change these if your path is different

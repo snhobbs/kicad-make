@@ -43,8 +43,10 @@ cd libs/InteractiveHtmlBom/ && pip install .
 
 ## Notes
 ### Semantic Versioning
-We encourage using semantic numbering for board revisions. See the blog post <https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/> for the versioning scheme.
-As rolling the patch number ({Major}.{Minor}.{Patch}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board revision. You can use any version number you want though.
+We encourage using semantic numbering for board versions. See the [blog post](https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/) for the versioning scheme.
+As rolling the patch number ({Major}.{Minor}.{Subversion}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board version. You can use any version number you want though.
+
+If VERSION is not set then the abreviated git hash is used.
 
 ## Usage
 You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command. 
@@ -54,22 +56,22 @@ The only usage requirements are:
 + make is called from the project directory
 + make finds the Makefile 
 
-### Create a board revision
+### Create a board version
 This is the default target and generates everything.
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number>
+make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number>
 ```
 
 ### Skip DRC Check
 Try to not do this too often... Exports everything, skipping ERC and DRC check.
 
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number> no-drc
+make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> no-drc
 ```
 
 ### Export schematic
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number> schematic
+make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> schematic
 ```
 
 
@@ -78,7 +80,7 @@ make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision n
 >> ls
 project.kicad_pro   project.kicad_sch   project.kicad_pcb   project.kicad_prl
 
->> make -f kicad-make/Makefile PROJECT=project REVISION=0.1.X
+>> make -f kicad-make/Makefile PROJECT=project VERSION=0.1.X
 
 >> ls
 project.kicad_pro   project.kicad_sch   project.kicad_pcb                   project.kicad_prl
