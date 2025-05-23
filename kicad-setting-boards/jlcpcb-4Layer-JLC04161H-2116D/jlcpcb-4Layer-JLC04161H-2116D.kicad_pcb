@@ -405,6 +405,17 @@
 		(layer "Dwgs.User")
 		(uuid "fc23fa2a-e058-434e-ac4b-790ab7855f4c")
 	)
+	(gr_rect
+		(start 81.28 88.9)
+		(end 182.88 124.46)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill none)
+		(layer "Edge.Cuts")
+		(uuid "8a0124d9-ecfc-4142-80c3-f22e87391485")
+	)
 	(gr_text "0 mm"
 		(at 79.457994 22.38 0)
 		(layer "Dwgs.User")
