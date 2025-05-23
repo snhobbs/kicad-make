@@ -15,7 +15,7 @@ PCBNEW_DIR=/usr/lib/python3/dist-packages
 export PYTHONPATH=${PYTHONPATH}:${PCBNEW_DIR}
 ```
 
-Install the subdirectories in the same python environment. If these outputs are not 
+Install the subdirectories in the same python environment. If these outputs are not
 needed then remove the related lines.
 
 ```sh
@@ -49,12 +49,12 @@ As rolling the patch number ({Major}.{Minor}.{Subversion}) is done to reflect BO
 If VERSION is not set then the abreviated git hash is used.
 
 ## Usage
-You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command. 
+You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command.
 The only usage requirements are:
 
 + All dependencies need to be on your path
 + make is called from the project directory
-+ make finds the Makefile 
++ make finds the Makefile
 
 ### Create a board version
 This is the default target and generates everything.
@@ -87,6 +87,29 @@ project.kicad_pro   project.kicad_sch   project.kicad_pcb                   proj
 project_0.1.X.zip   project_0.1.X.pdf   project_0.1.X_interactive_bom.html  fab
 mechanical
 ```
+
+## Docker Example
+A Dockerfile example is included to help with setting up your environment.
+I prefer to setup the environment locally and would instead recommend setting the tool paths in the Makefile
+itself to use the Docker commands. The `kicad-cli` command has a few examples of how to do that in the Makefile.
+
+### Build the image
+From the kicad-make repo directory run:
+
+```bash
+docker build -t kicad-env .
+```
+
+### Build a project
+From the kicad-make repo directory run:
+
+```bash
+docker run -v $(pwd):/home/kicad -it --rm --name t
+asd kicad-env make -f /usr/share/kicad-make/Makefile PROJECT=jlcpcb-4Layer-JLC04161H-2116D VER
+SION=0.1.X DIR=kicad-setting-boards/jlcpcb-4Layer-JLC04161H-2116D no-drc
+```
+This uses the settings board as an example build and uses the makefile in the Docker image.
+
 
 # FIXME
 + Add check of critical parts placement
