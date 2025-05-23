@@ -21,13 +21,17 @@ endif
 # Tools & Tool Paths, change these if your path is different
 #===============================================================
 # kicad-cli
-# KICADCLI=kicad-cli
+KICADCLI=kicad-cli
+
 #	flatpak
 #	KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
+
 #	snap
 #	KICADCLI=/snap/bin/kicad.kicad-cli
+
 #	docker
-KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:9.0 kicad-cli
+#KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:9.0 kicad-cli
+
 IBOM_SCRIPT=generate_interactive_bom
 #===============================================================
 
