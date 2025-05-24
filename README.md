@@ -7,6 +7,23 @@ At a minimum you'll need the kicad-cli which is available with KiCAD 7+ some of 
 in v8+. Depending on how you installed kicad this could be a whole bunch of places. Find it and add the location
 to your path.
 
+### kicad-cli for different installation types
+**flatpak**
+
+```bash
+KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
+```
+
+**snap**
+```bash
+KICADCLI=/snap/bin/kicad.kicad-cli
+```
+
+**docker**
+```bash
+KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:8.0 kicad-cli
+```
+
 ### Secondary Tools
 For python tools you'll also need to set the PYTHONPATH to find the pcbnew.py library.
 For Ubuntu when using aptitude it should show up in /usr/lib/python3/dist-packages.
@@ -17,7 +34,7 @@ PCBNEW_DIR=/usr/lib/python3/dist-packages
 export PYTHONPATH=${PYTHONPATH}:${PCBNEW_DIR}
 ```
 
-Install the subdirectories in the same python environment. If these outputs are not 
+Install the subdirectories in the same python environment. If these outputs are not
 needed then remove the related lines.
 
 ```sh
@@ -47,12 +64,12 @@ As rolling the patch number ({Major}.{Minor}.{Patch}) is done to reflect BOM or 
 
 ## Usage
 
-You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command. 
+You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command.
 The only usage requirements are:
 
 + All dependencies need to be on your path
 + make is called from the project directory
-+ make finds the Makefile 
++ make finds the Makefile
 
 ### Create a board revision
 This is the default target and generates everything.
@@ -66,6 +83,32 @@ Try to not do this too often... Exports everything, skipping ERC and DRC check.
 ```bash
 make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number> no-drc
 ```
+
+| **Target**      | **Description**                                           |
+| --------------- | --------------------------------------------------------- |
+| `all`           | Default target, triggers `release`.                       |
+| `clean`         | Cleans up generated files and directories.                |
+| `release`       | Full release process (DRC/ERC, manufacturing, packaging). |
+| `documents`     | Generates schematic, BOM, step, IBOM, & gerberpdf         |
+| `manufacturing` | Generates manufacturing files (Gerbers, IPC2581, etc.).   |
+| `no-drc`        | Skips DRC & ERC, completes the rest of the release process |
+| `schematic`     | Generates schematic PDF.                                  |
+| `boms`          | Generates BOM files (normal and LCSC).                    |
+| `board`         | Generates Gerbers, drill files, centroid files, outline.  |
+| `gerbers`       | Generates Gerber files.                                   |
+| `fabzip`        | Zips Gerber files and centroids for ordering.         |
+| `testpoints`    | Generates a testpoint report.                             |
+| `step`          | Generates STEP file of the board.                |
+| `ibom`          | Generates interactive BOM HTML.                           |
+| `gerberpdf`     | Converts a PDF report with the critical gerber layers     |
+| `centroid`      | Generates centroid files for assembly.                    |
+| `drc`           | Runs Design Rule Check and saves the report.              |
+| `erc`           | Runs Electrical Rule Check and saves the report.          |
+| `ipc2581`       | Generates IPC2581 files.                                  |
+| `fabzip`        | Zips Gerbers and related files.                           |
+| `board`         | Builds final board (Gerbers, drills, centroid, outline).  |
+| `ibom`          | Generates interactive BOM.                                |
+
 
 ### Export schematic
 ```bash
@@ -86,8 +129,10 @@ project_0.1.X.zip   project_0.1.X.pdf   project_0.1.X_interactive_bom.html  fab
 mechanical
 ```
 
+## High Level Targets
+
+
 # FIXME
 + Add mechanical drawing
 + Add renders of board top and bottom
-+ Add testpoint report
 + Add check of critical parts placement

@@ -1,4 +1,5 @@
-# Project Information. Call this make file with those values set
+#===============================================================
+# Project Information - Ensure variables PROJECT & VERSION are set
 #===============================================================
 ifndef PROJECT
 $(error PROJECT is not set)
@@ -6,38 +7,14 @@ endif
 ifndef VERSION
 $(error VERSION is not set)
 endif
+
+
 #===============================================================
-
-
-# Values you may want to change
+# Directory Paths & Tool Paths
 #===============================================================
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 DIR=$(abspath $(shell pwd))
 OUTDIR=$(abspath ${DIR})
-#===============================================================
-
-
-# Tools & Tool Paths, change these if your path is different
-#===============================================================
-# kicad-cli
-KICADCLI=kicad-cli
-#	flatpak
-#	KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
-#	snap
-#	KICADCLI=/snap/bin/kicad.kicad-cli
-#	docker
-#KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:8.0 kicad-cli
-IBOM_SCRIPT=generate_interactive_bom
-BOARD2PDF_SCRIPT=board2pdf
-KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
-#===============================================================
-
-SCH_DRAWING_SHEET=S{ROOT_DIR}/SchDrawingSheet.kicad_wks
-PCB_DRAWING_SHEET=${SCH_DRAWING_SHEET}
-#===============================================================
-
-_DIR=$(abspath ${DIR})
-_OUTDIR=$(abspath ${OUTDIR})
 MANUFACTURING_DIR=${_OUTDIR}/fab
 ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
 GERBER_DIR=${MANUFACTURING_DIR}/gerbers
@@ -45,9 +22,22 @@ LOGS_DIR=${_OUTDIR}/logs
 MECH_DIR=${_OUTDIR}/mechanical
 GERBERPDF_INI=${ROOT_DIR}/board2pdf.config.ini
 
-TIME=$(shell date +%s)
-COMMA := ,
-SPACE := $(empty) $(empty)
+# Tool paths
+KICADCLI=kicad-cli
+IBOM_SCRIPT=generate_interactive_bom
+BOARD2PDF_SCRIPT=board2pdf
+KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
+
+# Drawing Sheet Paths
+SCH_DRAWING_SHEET=S{ROOT_DIR}/SchDrawingSheet.kicad_wks
+PCB_DRAWING_SHEET=${SCH_DRAWING_SHEET}
+
+
+#===============================================================
+# Generated File Paths
+#===============================================================
+_DIR=$(abspath ${DIR})
+_OUTDIR=$(abspath ${OUTDIR})
 
 SCH=${_DIR}/${PROJECT}.kicad_sch
 PCB=${_DIR}/${PROJECT}.kicad_pcb
@@ -81,16 +71,21 @@ MECH_DIR=${_OUTDIR}/mechanical
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
 
-.PHONY: release manufacturing no-drc clean documents
-release: erc drc manufacturing fabzip documents
+TIME=$(shell date +%s)
 
-documents: schematic boms gerberpdf ibom step 
+.PHONY: all clean
+all: release
 
-manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} gerbers board ipc2581 testpoints
-	echo "\n\n Manufacturing Files Exported \n\n"
 
-no-drc: documents manufacturing fabzip
+#===============================================================
+# Create Directories if Not Exist
+#===============================================================
+$(LOGS_DIR) $(MANUFACTURING_DIR) $(ASSEMBLY_DIR) $(GERBER_DIR) $(MECH_DIR) $(OUTDIR):
+	mkdir -p $@
 
+#===============================================================
+# Clean Up Generated Files
+#===============================================================
 clean:
 	-rm ${GERBERPDF}
 	-rm ${PDFSCH}
@@ -107,6 +102,7 @@ clean:
 	-rm ${LOGS_DIR}/*.rpt
 	-rm ${LCSCBOM}
 	-rm ${IPC2581}
+	-rm ${TESTPOINT_REPORT}
 	-rm -r ${GERBER_DIR}
 	-rmdir ${MECH_DIR}
 	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${GERBER_PDF_DIR} ${LOGS_DIR}
@@ -133,24 +129,6 @@ ${BOM}: ${SCH} | ${ASSEMBLY_DIR}
 
 ${LCSCBOM}: ${SCH} | ${ASSEMBLY_DIR}
 	${KICADCLI} sch export bom "$<" --fields="Reference,Value,Footprint,LCSC,\$${QUANTITY},\$${DNP}" --labels="Ref Des,Value,Footprint,JLCPCB Part #,QUANTITY,DNP" --group-by="LCSC,\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
-
-${LOGS_DIR}: | ${_OUTDIR}
-	mkdir -p "$@"
-
-${MANUFACTURING_DIR}: | ${_OUTDIR}
-	mkdir -p "$@"
-
-${ASSEMBLY_DIR}: | ${MANUFACTURING_DIR}
-	mkdir -p "$@"
-
-${GERBER_DIR}: | ${MANUFACTURING_DIR}
-	mkdir -p "$@"
-
-${MECH_DIR}: | ${MANUFACTURING_DIR}
-	mkdir -p "$@"
-
-${_OUTDIR}:
-	mkdir -p "$@"
 
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB} | ${GERBER_DIR}
@@ -191,20 +169,46 @@ ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
 
+${ARCHIVE}: | ${release} ${_OUTDIR}
+	zip -r $@ ${_OUTDIR}
+
 gerbers: ${PCB} | ${GERBER_DIR}
 	${KICADCLI} pcb export gerbers --use-drill-file-origin "$<" -o ${GERBER_DIR}
 
-ipc2581: ${IPC2581}
+#===============================================================
+# Compund Targets
+#===============================================================
 
-fabzip: ${FABZIP}
+.PHONY: release gerbers ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
+
+release: erc drc manufacturing fabzip documents
+
+documents: schematic boms gerberpdf ibom step
+
+manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} gerbers board ipc2581 testpoints
+	echo "\n\n Manufacturing Files Exported \n\n"
+
+no-drc: documents manufacturing fabzip
+
+centroid: ${CENTROID} ${JLC_CENTROID}
+
+boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
+
+board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} boms ${OUTLINE}
+
+#===============================================================
+# Aliased Targets
+#===============================================================
+
+ipc2581: ${IPC2581}
 
 drc: ${DRC}
 
 erc: ${ERC}
 
-LCSCBOM: ${LCSCBOM}
+fabzip: ${FABZIP}
 
-zip: ${FABZIP}
+LCSCBOM: ${LCSCBOM}
 
 step: ${STEP}
 
@@ -212,20 +216,6 @@ ibom: ${IBOM}
 
 schematic: ${PDFSCH}
 
-boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
-
-board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} boms ${OUTLINE}
-
-setup: boms schematic ibom step
-
 gerberpdf: ${GERBERPDF}
 
-centroid: ${CENTROID} ${JLC_CENTROID}
-
-erc: ${ERC}
-
-drc: ${DRC}
-
 testpoints: ${TESTPOINT_REPORT}
-
-.PHONY: gerbers ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board setup gerberpdf centroid erc drc testpoints
