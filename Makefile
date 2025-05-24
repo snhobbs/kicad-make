@@ -29,6 +29,7 @@ KICADCLI=kicad-cli
 #KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:8.0 kicad-cli
 IBOM_SCRIPT=generate_interactive_bom
 BOARD2PDF_SCRIPT=board2pdf
+KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
 #===============================================================
 
 SCH_DRAWING_SHEET=S{ROOT_DIR}/SchDrawingSheet.kicad_wks
@@ -80,16 +81,15 @@ MECH_DIR=${_OUTDIR}/mechanical
 STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
 
-.PHONY: release
-release: ${MECH_DIR} ${ASSEMBLY_DIR} manufacturing fabzip
+.PHONY: release manufacturing no-drc clean documents
+release: erc drc manufacturing fabzip documents
 
-.PHONY: release manufacturing no-drc clean
-release: erc drc manufacturing fabzip
+documents: schematic boms gerberpdf ibom step 
 
-manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} schematic boms gerberpdf ibom step gerbers board ipc2581 testpoints
+manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} gerbers board ipc2581 testpoints
 	echo "\n\n Manufacturing Files Exported \n\n"
 
-no-drc: manufacturing fabzip
+no-drc: documents manufacturing fabzip
 
 clean:
 	-rm ${GERBERPDF}
@@ -113,7 +113,7 @@ clean:
 
 
 ${TESTPOINT_REPORT}: ${PCB} | ${_OUTDIR}
-	kicad_testpoints by-fab-setting --pcb "$<" --out "$@"
+	${KICAD_TESTPOINTS_SCRIPT} by-fab-setting --pcb "$<" --out "$@"
 
 # Move the log file to the final location if the command succeeds so it doesn't rerun
 ${DRC}: ${PCB} ${ERC} | ${LOGS_DIR}
