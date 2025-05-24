@@ -1,6 +1,6 @@
 # kicad-make
 
-Makefile for building a board revision. I've used the generated files with JLCPCB, Screaming Circuits, and OSHPark.
+Makefile to create releases of KiCAD designs. This project has a branch for each version of versions of KiCAD that have the CLI tool (v7, v8, & v9 currently).
 
 ## Setup
 At a minimum you'll need the kicad-cli which is available with KiCAD 7+ some of the features here are only available
@@ -43,11 +43,11 @@ cd libs/Board2Pdf/ && pip install .
 cd libs/InteractiveHtmlBom/ && pip install .
 ```
 
-## Features
+## Features (v8)
 + Runs DRC & ERC. If these do not pass than the manufacturing files won't be generated.
 + Includes both generic and JLCPCB targeted outputs
 
-## Generated Files
+### Generated Files
 + PDF Schematic
 + SVG board outline (edge cuts)
 + Gerbers w/ drill file & zipped gerbers
@@ -59,8 +59,8 @@ cd libs/InteractiveHtmlBom/ && pip install .
 
 ## Notes
 ### Semantic Versioning
-We encourage using semantic numbering for board revisions. See the blog post <https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/> for the versioning scheme.
-As rolling the patch number ({Major}.{Minor}.{Patch}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board revision. You can use any version number you want though.
+We encourage using semantic numbering for board versions. See the [blog post](https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/) for the versioning scheme.
+As rolling the subversion number ({Major}.{Minor}.{Subversion}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board version. You can use any version number you want though.
 
 ## Usage
 
@@ -71,19 +71,39 @@ The only usage requirements are:
 + make is called from the project directory
 + make finds the Makefile
 
-### Create a board revision
+### Create a board version
 This is the default target and generates everything.
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number>
+make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number>
 ```
 
 ### Skip DRC Check
 Try to not do this too often... Exports everything, skipping ERC and DRC check.
 
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number> no-drc
+make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> no-drc
 ```
 
+### Export schematic
+```bash
+make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> schematic
+```
+
+
+## Example Usage
+```bash
+>> ls
+project.kicad_pro   project.kicad_sch   project.kicad_pcb   project.kicad_prl
+
+>> make -f kicad-make/Makefile PROJECT=project VERSION=0.1.X
+
+>> ls
+project.kicad_pro   project.kicad_sch   project.kicad_pcb                   project.kicad_prl
+project_0.1.X.zip   project_0.1.X.pdf   project_0.1.X_interactive_bom.html  fab
+mechanical
+```
+
+## High Level Targets
 | **Target**      | **Description**                                           |
 | --------------- | --------------------------------------------------------- |
 | `all`           | Default target, triggers `release`.                       |
@@ -94,7 +114,7 @@ make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision n
 | `no-drc`        | Skips DRC & ERC, completes the rest of the release process |
 | `schematic`     | Generates schematic PDF.                                  |
 | `boms`          | Generates BOM files (normal and LCSC).                    |
-| `board`         | Generates Gerbers, drill files, centroid files, outline.  |
+| `board`         | Builds final board (Gerbers, drills, centroid, outline).  |
 | `gerbers`       | Generates Gerber files.                                   |
 | `fabzip`        | Zips Gerber files and centroids for ordering.         |
 | `testpoints`    | Generates a testpoint report.                             |
@@ -105,34 +125,7 @@ make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision n
 | `drc`           | Runs Design Rule Check and saves the report.              |
 | `erc`           | Runs Electrical Rule Check and saves the report.          |
 | `ipc2581`       | Generates IPC2581 files.                                  |
-| `fabzip`        | Zips Gerbers and related files.                           |
-| `board`         | Builds final board (Gerbers, drills, centroid, outline).  |
-| `ibom`          | Generates interactive BOM.                                |
-
-
-### Export schematic
-```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> REVISION=<revision number> schematic
-```
-
-
-## Example Usage
-```bash
->> ls
-project.kicad_pro   project.kicad_sch   project.kicad_pcb   project.kicad_prl
-
->> make -f kicad-make/Makefile PROJECT=project REVISION=0.1.X
-
->> ls
-project.kicad_pro   project.kicad_sch   project.kicad_pcb                   project.kicad_prl
-project_0.1.X.zip   project_0.1.X.pdf   project_0.1.X_interactive_bom.html  fab
-mechanical
-```
-
-## High Level Targets
 
 
 # FIXME
-+ Add mechanical drawing
-+ Add renders of board top and bottom
 + Add check of critical parts placement

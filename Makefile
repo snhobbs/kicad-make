@@ -4,22 +4,23 @@
 ifndef PROJECT
 $(error PROJECT is not set)
 endif
+
+# Use VERSION="$(shell cd $(DIR) && git show --pretty='%h' | head --lines=1)" for the git commit
 ifndef VERSION
 $(error VERSION is not set)
 endif
 
-
 #===============================================================
 # Directory Paths & Tool Paths
 #===============================================================
-ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-DIR=$(abspath $(shell pwd))
-OUTDIR=$(abspath ${DIR})
-MANUFACTURING_DIR=${_OUTDIR}/fab
-ASSEMBLY_DIR=${MANUFACTURING_DIR}/assembly
-GERBER_DIR=${MANUFACTURING_DIR}/gerbers
-LOGS_DIR=${_OUTDIR}/logs
-MECH_DIR=${_OUTDIR}/mechanical
+ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+DIR := $(abspath $(shell pwd))
+OUTDIR = $(abspath ${DIR})
+MANUFACTURING_DIR = ${_OUTDIR}/fab
+ASSEMBLY_DIR = ${MANUFACTURING_DIR}/assembly
+GERBER_DIR = ${MANUFACTURING_DIR}/gerbers
+LOGS_DIR = ${_OUTDIR}/logs
+MECH_DIR = ${_OUTDIR}/mechanical
 GERBERPDF_INI=${ROOT_DIR}/board2pdf.config.ini
 
 # Tool paths
@@ -29,8 +30,8 @@ BOARD2PDF_SCRIPT=board2pdf
 KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
 
 # Drawing Sheet Paths
-SCH_DRAWING_SHEET=S{ROOT_DIR}/SchDrawingSheet.kicad_wks
-PCB_DRAWING_SHEET=${SCH_DRAWING_SHEET}
+SCH_DRAWING_SHEET = ${ROOT_DIR}/SchDrawingSheet.kicad_wks
+PCB_DRAWING_SHEET = ${SCH_DRAWING_SHEET}
 
 
 #===============================================================
@@ -168,9 +169,6 @@ ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
 
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
-
-${ARCHIVE}: | ${release} ${_OUTDIR}
-	zip -r $@ ${_OUTDIR}
 
 gerbers: ${PCB} | ${GERBER_DIR}
 	${KICADCLI} pcb export gerbers --use-drill-file-origin "$<" -o ${GERBER_DIR}
