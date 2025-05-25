@@ -1,9 +1,28 @@
 # kicad-make
-Makefile to create releases of KiCAD designs. This project has a branch for each version of versions of KiCAD that have the CLI tool (v7, v8, & v9 currently).
+
+Makefile to create releases of KiCad designs. This project has a branch for each version of versions of KiCad that have the CLI tool (v7, v8, & v9 currently).
 
 ## Setup
-At a minimum you'll need the kicad-cli which is available with KiCAD 7+. Choose the correct release or branch for the version you're using.
-Make sure kicad-cli is on your path or edit the makefile so KICAD-CLI is set correctly.
+At a minimum you'll need the kicad-cli which is available with KiCad 7+ some of the features here are only available
+in v8+. Depending on how you installed kicad this could be a whole bunch of places. Find it and add the location
+to your path.
+
+### kicad-cli for different installation types
+**flatpak**
+
+```bash
+KICADCLI=flatpak run --command=kicad-cli org.kicad.KiCad
+```
+
+**snap**
+```bash
+KICADCLI=/snap/bin/kicad.kicad-cli
+```
+
+**docker**
+```bash
+KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:8.0 kicad-cli
+```
 
 ### Secondary Tools
 For python tools you'll also need to set the PYTHONPATH to find the pcbnew.py library.
@@ -27,13 +46,13 @@ cd libs/InteractiveHtmlBom/ && pip install .
 + Runs DRC & ERC. If these do not pass than the manufacturing files won't be generated.
 + Includes both generic and JLCPCB targeted outputs
 
-## Generated Files
+### Generated Files
 + PDF Schematic
 + SVG board outline (edge cuts)
 + Gerbers w/ drill file & zipped gerbers
 + Interactive HTML BOM
 + STEP model of board
-+ centroid w/ KiCAD and JLCPCB format
++ centroid w/ KiCad and JLCPCB format
 + Full BOM and JLCPCB version
 + PDF gerber report
 + GenCAD
@@ -44,11 +63,10 @@ cd libs/InteractiveHtmlBom/ && pip install .
 ## Notes
 ### Semantic Versioning
 We encourage using semantic numbering for board versions. See the [blog post](https://www.maskset.net/blog/2023/02/26/semantic-versioning-for-hardware/) for the versioning scheme.
-As rolling the patch number ({Major}.{Minor}.{Subversion}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board version. You can use any version number you want though.
-
-If VERSION is not set then the abreviated git hash is used.
+As rolling the subversion number ({Major}.{Minor}.{Subversion}) is done to reflect BOM or manufacturing changes then the released board files will only be tied to the major & minor number. To reflect this we use {Major}.{Minor}.X as the board version. You can use any version number you want though.
 
 ## Usage
+
 You can copy or symlink the makefile into your project however I prefer to point to the file directly with makes -f command.
 The only usage requirements are:
 
@@ -73,7 +91,6 @@ make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version num
 ```bash
 make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> schematic
 ```
-
 
 ## Example Usage
 ```bash
@@ -109,6 +126,34 @@ asd kicad-env make -f /usr/share/kicad-make/Makefile PROJECT=jlcpcb-4Layer-JLC04
 SION=0.1.X DIR=kicad-setting-boards/jlcpcb-4Layer-JLC04161H-2116D no-drc
 ```
 This uses the settings board as an example build and uses the makefile in the Docker image.
+
+
+## High Level Targets
+
+| **Target**      | **Description**                                           |
+| --------------- | --------------------------------------------------------- |
+| `all`           | Default target, triggers `release`.                       |
+| `clean`         | Cleans up generated files and directories.                |
+| `release`       | Full release process (DRC/ERC, manufacturing, packaging). |
+| `documents`     | Generates schematic, BOM, step, IBOM, & gerberpdf         |
+| `manufacturing` | Generates manufacturing files (Gerbers, IPC2581, etc.).   |
+| `no-drc`        | Skips DRC & ERC, completes the rest of the release process |
+| `schematic`     | Generates schematic PDF.                                  |
+| `boms`          | Generates BOM files (normal and LCSC).                    |
+| `gerbers`       | Generates Gerber files.                                   |
+| `fabzip`        | Zips Gerber files and centroids for ordering.         |
+| `testpoints`    | Generates a testpoint report.                             |
+| `step`          | Generates STEP file of the board.                |
+| `ibom`          | Generates interactive BOM HTML.                           |
+| `gerberpdf`     | Converts a PDF report with the critical gerber layers     |
+| `centroid`      | Generates centroid files for assembly.                    |
+| `drc`           | Runs Design Rule Check and saves the report.              |
+| `erc`           | Runs Electrical Rule Check and saves the report.          |
+| `ipc2581`       | Generates IPC2581 files.                                  |
+| `board`         | Builds final board (Gerbers, drills, centroid, outline).  |
+| `renders`       | Generates 3D renders of the PCB (top, bottom, front, back, left, right). |
+| `gencad`        | Generates GEN-CAD files.                                                 |
+| `odb`           | Generates ODB++ files.                                                   |
 
 
 # FIXME
