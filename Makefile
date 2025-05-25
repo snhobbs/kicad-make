@@ -46,7 +46,6 @@ PCBBASE=$(basename $(notdir ${PCB}))
 SCHBASE=$(basename $(notdir ${SCH}))
 
 BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
-LCSCBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_LCSC_BOM.csv
 ERC=${LOGS_DIR}/erc.rpt
 DRC=${LOGS_DIR}/drc.rpt
 
@@ -58,12 +57,11 @@ GERBERPDF=${_OUTDIR}/${PCBBASE}_${VERSION}_gerbers.pdf
 # BOMS & Assembly
 CENTROID_CSV=${ASSEMBLY_DIR}/centroid.csv
 CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
-JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
 
 # Manufacturing Files
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
-IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
+IPC2581=${MANUFACTURING_DIR}/IPC2581_${PCBBASE}_${VERSION}.xml
 TESTPOINT_REPORT=${_OUTDIR}/testpoints_${PCBBASE}_${VERSION}.csv
 NETLIST=${_OUTDIR}/netlist_${PCBBASE}_${VERSION}.csv
 
@@ -94,20 +92,17 @@ clean:
 	-rm ${STEP}
 	-rm ${CENTROID_GERBER}
 	-rm ${CENTROID_CSV}
-	-rm ${JLC_CENTROID}
 	-rm ${IBOM}
 	-rm ${GERBER_DIR}/*.gbr
 	-rm ${FABZIP}
 	-rm ${OUTLINE}
 	-rm ${LOGS_DIR}/*.log
 	-rm ${LOGS_DIR}/*.rpt
-	-rm ${LCSCBOM}
 	-rm ${IPC2581}
 	-rm ${TESTPOINT_REPORT}
 	-rm -r ${GERBER_DIR}
 	-rmdir ${MECH_DIR}
 	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${GERBER_PDF_DIR} ${LOGS_DIR}
-
 
 ${TESTPOINT_REPORT}: ${PCB} | ${_OUTDIR}
 	${KICAD_TESTPOINTS_SCRIPT} by-fab-setting --pcb "$<" --out "$@"
@@ -126,10 +121,7 @@ ${PDFSCH} : ${SCH} | ${_OUTDIR}
 	${KICADCLI} sch export pdf --black-and-white --drawing-sheet ${SCH_DRAWING_SHEET} "$<" -o "$@"
 
 ${BOM}: ${SCH} | ${ASSEMBLY_DIR}
-	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},MPN,LCSC,Notes" --group-by="\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
-
-${LCSCBOM}: ${SCH} | ${ASSEMBLY_DIR}
-	${KICADCLI} sch export bom "$<" --fields="Reference,Value,Footprint,LCSC,\$${QUANTITY},\$${DNP}" --labels="Ref Des,Value,Footprint,JLCPCB Part #,QUANTITY,DNP" --group-by="LCSC,\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
+	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},Manufacturers Part Number,MPN,Notes" --group-by="\$${DNP},Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
 
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB} | ${GERBER_DIR}
@@ -138,11 +130,6 @@ ${DRILL}: ${PCB} | ${GERBER_DIR}
 
 ${CENTROID_CSV}: ${PCB} | ${ASSEMBLY_DIR}
 	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm "$<" -o "$@"
-
-${JLC_CENTROID}: ${CENTROID_CSV} | ${ASSEMBLY_DIR}
-	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >>
-	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > "$@"
-	tail --lines=+2 "$<" >> "$@"
 
 ${STEP}: ${PCB} | ${MECH_DIR}
 	${KICADCLI} pcb export step "$<" --drill-origin --subst-models -f -o "$@"
@@ -155,7 +142,7 @@ ${IBOM}: ${PCB} | ${ASSEMBLY_DIR}
 		--include-nets --normalize-field-case --no-browser --dest-dir ./ \
 		--name-format "$(basename $@ )"
 
-${FABZIP}: ${GERBER_DIR}
+${FABZIP}: ${MANUFACTURING_DIR} ${CENTROID_CSV} gerbers ${IPC2581} boms
 	zip -rj "$@" "$<"
 
 ${OUTLINE}: ${PCB} | ${MECH_DIR}
@@ -177,7 +164,7 @@ gerbers: ${PCB} | ${GERBER_DIR}
 # Compund Targets
 #===============================================================
 
-.PHONY: release gerbers ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
+.PHONY: release gerbers ipc2581 fabzip drc erc zip step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
 
 release: erc drc manufacturing fabzip documents
 
@@ -188,11 +175,11 @@ manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} gerbers board ipc2581 t
 
 no-drc: documents manufacturing fabzip
 
-centroid: ${CENTROID} ${JLC_CENTROID}
+centroid: ${CENTROID}
 
-boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
+boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM}
 
-board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} boms ${OUTLINE}
+board: gerbers ${DRILL} ${CENTROID_CSV} boms ${OUTLINE}
 
 #===============================================================
 # Aliased Targets
@@ -205,8 +192,6 @@ drc: ${DRC}
 erc: ${ERC}
 
 fabzip: ${FABZIP}
-
-LCSCBOM: ${LCSCBOM}
 
 step: ${STEP}
 

@@ -10,12 +10,6 @@ MACROFAB_GERBERS_DIR = $(MACROFAB_DIR)/gerbers
 MACROFAB_ZIP = $(_OUTDIR)/${PCBBASE}_${VERSION}_macrofab.zip
 MACROFAB_XYRS = $(MACROFAB_DIR)/${PCBBASE}_${VERSION}_macrofab.xyrs
 KICAD_XYRS_SCRIPT=kicad_xyrs
-MACROFAB_DIRS=
-
-macrofab_release: $(MACROFAB_ZIP) | $(MACROFAB_DIR)
-	@echo "Preparing files for MacroFab release"
-	# Add any custom MacroFab packaging steps here, for example:
-	@echo "MacroFab files copied to $(MACROFAB_DIR)"
 
 $(MACROFAB_DIR) $(MACROFAB_GERBERS_DIR):
 	mkdir -p "$@"
@@ -24,17 +18,20 @@ ${MACROFAB_XYRS}: ${PCB} | $(MACROFAB_DIR)
 	$(KICAD_XYRS_SCRIPT) --pcb "$<" --out "$@" --format macrofab
 	sed -i '1s/^/# /' "$@"  #  Comment out the header
 
-macrofab_gerbers: $(PCB) $(DRILL) | $(MACROFAB_DIR) $(MACROFAB_GERBERS_DIR)
+fab_release: $(MACROFAB_ZIP) | $(MACROFAB_DIR)
+	@echo "Preparing files for MacroFab release"
+	# Add any custom MacroFab packaging steps here, for example:
+	@echo "MacroFab files copied to $(MACROFAB_DIR)"
+
+fab_gerbers: $(PCB) $(DRILL) | $(MACROFAB_DIR) $(MACROFAB_GERBERS_DIR)
 	$(KICADCLI) pcb export gerbers --use-drill-file-origin "$<" -o $(MACROFAB_GERBERS_DIR)
 	cp $(DRILL) $(MACROFAB_GERBERS_DIR)
 	@echo "$(MACROFAB_GERBERS_DIR)"
-	-rm $(MACROFAB_GERBERS_DIR)/*.gbrjob
-	-rm $(MACROFAB_GERBERS_DIR)/*.gbr
-	-rm $(MACROFAB_GERBERS_DIR)/*Adhesive*
+	rm -f $(wildcard $(MACROFAB_GERBERS_DIR)/*.gbrjob)
+	rm -f $(wildcard $(MACROFAB_GERBERS_DIR)/*.gbr)
+	rm -f $(wildcard $(MACROFAB_GERBERS_DIR)/*Adhesive*)
 
-${MACROFAB_ZIP}: $(MACROFAB_DIR) $(MACROFAB_XYRS) macrofab_gerbers
+${MACROFAB_ZIP}: $(MACROFAB_DIR) $(MACROFAB_XYRS) fab_gerbers
 	zip -rj "$@" "$<"
 
-macrofab_dirs: $(MACROFAB_DIRS)
-
-.PHONY: macrofab_release macrofab_gerbers macrofab_dirs
+.PHONY: fab_release fab_gerbers
