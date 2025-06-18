@@ -10,6 +10,9 @@ JLCPCB_ZIP = $(_OUTDIR)/$(PCBBASE)_$(VERSION)_jlcpcb.zip
 LCSCBOM=$(JLCPCB_DIR)/$(SCHBASE)_$(VERSION)_LCSC_BOM.csv
 JLCPCB_CENTROID=$(JLCPCB_DIR)/jlcpcb-centroid.csv
 
+.PHONY: default
+default: fab_release
+
 $(JLCPCB_DIR) $(JLCPCB_GERBERS_DIR):
 	mkdir -p "$@"
 
