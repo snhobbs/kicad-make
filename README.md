@@ -1,11 +1,22 @@
 # kicad-make
 
-Makefile to create releases of KiCAD designs. This project has a branch for each version of versions of KiCAD that have the CLI tool (v7, v8, & v9 currently).
+Makefile to create releases of KiCad designs. This project has a branch for each version of versions of KiCad that have the CLI tool (v7, v8, & v9 currently).
+
+## Structure
+There is one common Makefile and several manufacture specific targets.
+Additional manufacturer targets can be added as separate files and included at the bottom of Makefile.
+To make all targets including the jlcpcb and macrofab manufacturing files use:
+
+```sh
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> manufacturing_release -j$(nproc)
+```
 
 ## Setup
-At a minimum you'll need the kicad-cli which is available with KiCAD 7+ some of the features here are only available
-in v8+. Depending on how you installed kicad this could be a whole bunch of places. Find it and add the location
+At a minimum you'll need the kicad-cli which is available with KiCad 7+ some of the features here are only available
+in v8+. Depending on how you installed KiCad this could be a whole bunch of places. Find it and add the location
 to your path.
+
+A Dockerfile is included to make setup easier.
 
 ### kicad-cli for different installation types
 **flatpak**
@@ -53,7 +64,7 @@ cd libs/InteractiveHtmlBom/ && pip install .
 + Gerbers w/ drill file & zipped gerbers
 + Interactive HTML BOM
 + STEP model of board
-+ centroid w/ KiCAD and JLCPCB format
++ centroid w/ KiCad and JLCPCB format
 + Full BOM and JLCPCB version
 + PDF gerber report with board2pdf
 
@@ -74,19 +85,19 @@ The only usage requirements are:
 ### Create a board version
 This is the default target and generates everything.
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number>
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number>
 ```
 
 ### Skip DRC Check
 Try to not do this too often... Exports everything, skipping ERC and DRC check.
 
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> no-drc
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> no-drc
 ```
 
 ### Export schematic
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> schematic
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> schematic
 ```
 
 
@@ -102,6 +113,29 @@ project.kicad_pro   project.kicad_sch   project.kicad_pcb                   proj
 project_0.1.X.zip   project_0.1.X.pdf   project_0.1.X_interactive_bom.html  fab
 mechanical
 ```
+
+## Docker Example
+A Dockerfile example is included to help with setting up your environment.
+I prefer to setup the environment locally and would instead recommend setting the tool paths in the Makefile
+itself to use the Docker commands. The `kicad-cli` command has a few examples of how to do that in the Makefile.
+
+### Build the image
+From the kicad-make repo directory run:
+
+```bash
+docker build -t kicad-env .
+```
+
+### Build a project
+From the kicad-make repo directory run:
+
+```bash
+docker run -v $(pwd):/home/kicad -it --rm --name t
+asd kicad-env make -f /usr/share/kicad-make/Makefile PROJECT=jlcpcb-4Layer-JLC04161H-2116D VER
+SION=0.1.X DIR=kicad-setting-boards/jlcpcb-4Layer-JLC04161H-2116D no-drc
+```
+This uses the settings board as an example build and uses the makefile in the Docker image.
+
 
 ## High Level Targets
 | **Target**      | **Description**                                           |

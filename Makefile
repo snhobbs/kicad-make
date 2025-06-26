@@ -50,7 +50,7 @@ ERC=${LOGS_DIR}/erc.rpt
 DRC=${LOGS_DIR}/drc.rpt
 
 # Visualizations
-PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}.pdf
+PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}_schematic.pdf
 IBOM=${_OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
 GERBERPDF=${_OUTDIR}/${PCBBASE}_${VERSION}_gerbers.pdf
 
@@ -60,7 +60,10 @@ CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
 
 # Manufacturing Files
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
-FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
+FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}_manufacturing.zip
+IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
+GENCAD=${_OUTDIR}/GENCAD_${PCBBASE}_${VERSION}.cad
+ODB=${_OUTDIR}/ODB_${PCBBASE}_${VERSION}.zip
 IPC2581=${MANUFACTURING_DIR}/IPC2581_${PCBBASE}_${VERSION}.xml
 TESTPOINT_REPORT=${_OUTDIR}/testpoints_${PCBBASE}_${VERSION}.csv
 NETLIST=${_OUTDIR}/netlist_${PCBBASE}_${VERSION}.csv
