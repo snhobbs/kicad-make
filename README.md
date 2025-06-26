@@ -2,10 +2,21 @@
 
 Makefile to create releases of KiCad designs. This project has a branch for each version of versions of KiCad that have the CLI tool (v7, v8, & v9 currently).
 
+## Structure
+There is one common Makefile and several manufacture specific targets.
+Additional manufacturer targets can be added as separate files and included at the bottom of Makefile.
+To make all targets including the jlcpcb and macrofab manufacturing files use:
+
+```sh
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> manufacturing_release -j$(nproc)
+```
+
 ## Setup
 At a minimum you'll need the kicad-cli which is available with KiCad 7+ some of the features here are only available
-in v8+. Depending on how you installed kicad this could be a whole bunch of places. Find it and add the location
+in v8+. Depending on how you installed KiCad this could be a whole bunch of places. Find it and add the location
 to your path.
+
+A Dockerfile is included to make setup easier.
 
 ### kicad-cli for different installation types
 **flatpak**
@@ -21,7 +32,7 @@ KICADCLI=/snap/bin/kicad.kicad-cli
 
 **docker**
 ```bash
-KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:8.0 kicad-cli
+KICADCLI=docker run -v /tmp/.X11-unix:/tmp/.X11-unix -v ${HOME}:${HOME} -it --rm -e DISPLAY=:0 --name kicad-cli kicad/kicad:9.0 kicad-cli
 ```
 
 ### Secondary Tools
@@ -77,19 +88,19 @@ The only usage requirements are:
 ### Create a board version
 This is the default target and generates everything.
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number>
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number>
 ```
 
 ### Skip DRC Check
 Try to not do this too often... Exports everything, skipping ERC and DRC check.
 
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> no-drc
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> no-drc
 ```
 
 ### Export schematic
 ```bash
-make -f kicad-make/Makefile PROJECT=<name of kicad project> VERSION=<version number> schematic
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> schematic
 ```
 
 ## Example Usage

@@ -1,3 +1,4 @@
+# Base Makefile, there are additional Makefiles for specific output configurations and manufacturers
 #===============================================================
 # Project Information - Ensure variables PROJECT & VERSION are set
 #===============================================================
@@ -31,6 +32,7 @@ KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
 SCH_DRAWING_SHEET = ${ROOT_DIR}/SchDrawingSheet.kicad_wks
 PCB_DRAWING_SHEET = ${SCH_DRAWING_SHEET}
 
+
 #===============================================================
 # Generated File Paths
 #===============================================================
@@ -43,33 +45,33 @@ PCBBASE=$(basename $(notdir ${PCB}))
 SCHBASE=$(basename $(notdir ${SCH}))
 
 BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
-LCSCBOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_LCSC_BOM.csv
 ERC=${LOGS_DIR}/erc.rpt
 DRC=${LOGS_DIR}/drc.rpt
 
 # Visualizations
-PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}.pdf
+PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}_schematic.pdf
 IBOM=${_OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
 GERBER_PDF_DIR=${_OUTDIR}/gerberpdf
 GERBERPDF=${_OUTDIR}/${PCBBASE}_${VERSION}_gerbers.pdf
-RENDERS:= ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_TOP.png \
-		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_BOTTOM.png \
-		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_LEFT.png \
-		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_RIGHT.png \
-		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_FRONT.png \
-		   ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_BACK.png
+RENDER_DIR=${_OUTDIR}/renders
+RENDERS:= ${RENDER_DIR}/Render_TOP.png \
+		   ${RENDER_DIR}/Render_BOTTOM.png \
+		   ${RENDER_DIR}/Render_LEFT.png \
+		   ${RENDER_DIR}/Render_RIGHT.png \
+		   ${RENDER_DIR}/Render_FRONT.png \
+		   ${RENDER_DIR}/Render_BACK.png
 
 # BOMS & Assembly
 CENTROID_CSV=${ASSEMBLY_DIR}/centroid.csv
 CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
-JLC_CENTROID=${ASSEMBLY_DIR}/jlc-centroid.csv
 
 # Manufacturing Files
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
-FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}.zip
+FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}_manufacturing.zip
 IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
 GENCAD=${_OUTDIR}/GENCAD_${PCBBASE}_${VERSION}.cad
 ODB=${_OUTDIR}/ODB_${PCBBASE}_${VERSION}.zip
+IPC2581=${MANUFACTURING_DIR}/IPC2581_${PCBBASE}_${VERSION}.xml
 TESTPOINT_REPORT=${_OUTDIR}/testpoints_${PCBBASE}_${VERSION}.csv
 NETLIST=${_OUTDIR}/netlist_${PCBBASE}_${VERSION}.csv
 
@@ -125,7 +127,7 @@ all: release
 #===============================================================
 # Create Directories if Not Exist
 #===============================================================
-$(LOGS_DIR) $(MANUFACTURING_DIR) $(ASSEMBLY_DIR) $(GERBER_DIR) $(MECH_DIR) $(OUTDIR) $(GERBER_PDF_DIR):
+$(LOGS_DIR) $(MANUFACTURING_DIR) $(ASSEMBLY_DIR) $(GERBER_DIR) $(MECH_DIR) $(OUTDIR) $(GERBER_PDF_DIR) $(RENDER_DIR):
 	mkdir -p $@
 
 #===============================================================
@@ -138,14 +140,12 @@ clean:
 	-rm ${STEP}
 	-rm ${CENTROID_GERBER}
 	-rm ${CENTROID_CSV}
-	-rm ${JLC_CENTROID}
 	-rm ${IBOM}
 	-rm ${GERBER_DIR}/*.gbr
 	-rm ${FABZIP}
 	-rm ${OUTLINE}
 	-rm ${LOGS_DIR}/*.log
 	-rm ${LOGS_DIR}/*.rpt
-	-rm ${LCSCBOM}
 	-rm ${IPC2581}
 	-rm ${TESTPOINT_REPORT}
 	-rm ${RENDERS}
@@ -174,10 +174,7 @@ ${PDFSCH} : ${SCH} | ${_OUTDIR}
 	${KICADCLI} sch export pdf --black-and-white --drawing-sheet ${SCH_DRAWING_SHEET} "$<" -o "$@"
 
 ${BOM}: ${SCH} | ${ASSEMBLY_DIR}
-	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},MPN,LCSC,Notes" --group-by="\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
-
-${LCSCBOM}: ${SCH} | ${ASSEMBLY_DIR}
-	${KICADCLI} sch export bom "$<" --fields="Reference,Value,Footprint,LCSC,\$${QUANTITY},\$${DNP}" --labels="Ref Des,Value,Footprint,JLCPCB Part #,QUANTITY,DNP" --group-by="LCSC,\$${DNP},Value,Footprint" --ref-range-delimiter="" -o "$@"
+	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},Manufacturers Part Number,MPN,Notes" --group-by="\$${DNP},Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
 
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB} | ${GERBER_DIR}
@@ -186,11 +183,6 @@ ${DRILL}: ${PCB} | ${GERBER_DIR}
 
 ${CENTROID_CSV}: ${PCB} | ${ASSEMBLY_DIR}
 	${KICADCLI} pcb export pos --use-drill-file-origin --side both --format csv --units mm "$<" -o "$@"
-
-${JLC_CENTROID}: ${CENTROID_CSV} | ${ASSEMBLY_DIR}
-	#echo "Ref,Val,Package,PosX,PosY,Rot,Side" >>
-	echo "Designator,Comment,Footprint,Mid X,Mid Y,Rotation,Layer" > "$@"
-	tail --lines=+2 "$<" >> "$@"
 
 ${STEP}: ${PCB} | ${MECH_DIR}
 	${KICADCLI} pcb export step "$<" --drill-origin --subst-models -f -o "$@"
@@ -203,22 +195,27 @@ ${IBOM}: ${PCB} | ${ASSEMBLY_DIR}
 		--include-nets --normalize-field-case --no-browser --dest-dir ./ \
 		--name-format "$(basename $@ )"
 
-${FABZIP}: ${GERBER_DIR}
+${FABZIP}: ${MANUFACTURING_DIR} ${CENTROID_CSV} gerbers ${IPC2581} boms
 	zip -rj "$@" "$<"
 
 ${OUTLINE}: ${PCB} | ${MECH_DIR}
 	${KICADCLI} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet "$<" -o "$@"
 
-${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
+${RENDER_DIR}/Render_%.png: ${PCB} | ${_OUTDIR} ${RENDER_DIR}
 	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) --background transparent --quality high "$<" -o "$@"
 
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
 
 ${GERBERPDF}: ${PCB} | ${GERBER_PDF_DIR}
-	${KICADCLI} pcb export pdf ${PCB} --black-and-white --cl "Edge.Cuts" -l ${PDF_GERBER_LAYERS_CSV} -o ${GERBER_PDF_DIR} \
+	${KICADCLI} pcb export pdf ${PCB} --black-and-white \
+		--cl "Edge.Cuts" \
+		-l ${PDF_GERBER_LAYERS_CSV} \
+		-o ${GERBER_PDF_DIR} \
 		--drawing-sheet ${PCB_DRAWING_SHEET} \
-		--mode-separate --include-border-title --sketch-pads-on-fab-layers
+		--mode-separate \
+		--include-border-title \
+		--sketch-pads-on-fab-layers
 
 # Filter out the layers that don't exist
 # pdfunite $(shell for f in $(PDF_GERBER_FILES); do [ -e "$$f" ] && printf "%s " "$$f"; done) "$@"
@@ -232,7 +229,10 @@ ${GERBERPDF}: ${PCB} | ${GERBER_PDF_DIR}
 	  fi
 
 ${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
-	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) --background transparent --quality high "$<" -o "$@"
+	${KICADCLI} pcb render \
+		--side $(shell echo $* | tr A-Z a-z) \
+		--background transparent \
+		--quality high "$<" -o "$@"
 
 ${GENCAD}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export gencad "$<" -o "$@"
@@ -247,7 +247,7 @@ gerbers: ${PCB} | ${GERBER_DIR}
 # Compund Targets
 #===============================================================
 
-.PHONY: release gerbers odb gencad ipc2581 fabzip drc erc LCSCBOM zip step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
+.PHONY: release gerbers odb gencad ipc2581 fabzip drc erc zip step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
 
 release: erc drc manufacturing fabzip documents
 
@@ -260,9 +260,9 @@ no-drc: documents manufacturing fabzip
 
 centroid: ${CENTROID} ${JLC_CENTROID}
 
-boms: ${ASSEMBLY_DIR} ${BOM} ${LCSCBOM} ${ASSEMBLY_BOM} ibom
+boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM} ibom
 
-board: gerbers ${DRILL} ${CENTROID_CSV} ${JLC_CENTROID} boms ${OUTLINE}
+board: gerbers ${DRILL} ${CENTROID_CSV} boms ${OUTLINE}
 
 #===============================================================
 # Aliased Targets
@@ -280,8 +280,6 @@ erc: ${ERC}
 
 fabzip: ${FABZIP}
 
-LCSCBOM: ${LCSCBOM}
-
 step: ${STEP}
 
 ibom: ${IBOM}
@@ -293,3 +291,18 @@ gerberpdf: ${GERBERPDF}
 testpoints: ${TESTPOINT_REPORT}
 
 renders: ${RENDERS}
+
+
+#===============================================================
+# Manufacturer Targets
+#===============================================================
+THIS_MAKEFILE := $(lastword $(MAKEFILE_LIST))
+THIS_DIR := $(dir $(realpath $(THIS_MAKEFILE)))
+
+.PHONY: manufacturing_release 
+manufacturing_release: release macrofab_release jlcpcb_release
+	# Makes all manufacture releases and adds them to the output directory
+
+include $(THIS_DIR)/jlcpcb.mk
+include $(THIS_DIR)/macrofab.mk
+
