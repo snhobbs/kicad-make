@@ -154,9 +154,6 @@ ${OUTLINE}: ${PCB} | ${MECH_DIR}
 ${GERBERPDF}: ${PCB} | ${_OUTDIR}
 	${BOARD2PDF_SCRIPT} "$<" --output "$@" --ini ${GERBERPDF_INI}
 
-${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
-	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) --background transparent --quality high "$<" -o "$@"
-
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
 
@@ -205,3 +202,18 @@ schematic: ${PDFSCH}
 gerberpdf: ${GERBERPDF}
 
 testpoints: ${TESTPOINT_REPORT}
+
+
+#===============================================================
+# Manufacturer Targets
+#===============================================================
+THIS_MAKEFILE := $(lastword $(MAKEFILE_LIST))
+THIS_DIR := $(dir $(realpath $(THIS_MAKEFILE)))
+
+.PHONY: manufacturing_release 
+manufacturing_release: release macrofab_release jlcpcb_release
+	# Makes all manufacture releases and adds them to the output directory
+
+include $(THIS_DIR)/jlcpcb.mk
+include $(THIS_DIR)/macrofab.mk
+
