@@ -67,7 +67,6 @@ CENTROID_GERBER=${ASSEMBLY_DIR}/centroid.gerber
 # Manufacturing Files
 DRILL=${MANUFACTURING_DIR}/gerbers/drill.drl
 FABZIP=${_OUTDIR}/${PCBBASE}_${VERSION}_manufacturing.zip
-IPC2581=${_OUTDIR}/IPC2581_${PCBBASE}_${VERSION}.xml
 GENCAD=${_OUTDIR}/GENCAD_${PCBBASE}_${VERSION}.cad
 ODB=${_OUTDIR}/ODB_${PCBBASE}_${VERSION}.zip
 IPC2581=${MANUFACTURING_DIR}/IPC2581_${PCBBASE}_${VERSION}.xml
@@ -299,9 +298,10 @@ THIS_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 THIS_DIR := $(dir $(realpath $(THIS_MAKEFILE)))
 
 .PHONY: manufacturing_release 
-manufacturing_release: release macrofab_release jlcpcb_release
+manufacturing_release: release macrofab_release jlcpcb_release circuithub_release
 	# Makes all manufacture releases and adds them to the output directory
 
 include $(THIS_DIR)/jlcpcb.mk
 include $(THIS_DIR)/macrofab.mk
+include $(THIS_DIR)/circuithub.mk
 
