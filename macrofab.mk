@@ -1,4 +1,6 @@
-# Include the main Makefile relative to this one
+# Macrofab needs the gerbers and the XYRS file
+# They also take ODB++ which KiCad 9 can export. The ODB zip file can then
+# just be used optionally with the CSV BOM.
 MACROFAB_DIR = $(_OUTDIR)/macrofab
 MACROFAB_GERBERS_DIR = $(MACROFAB_DIR)/gerbers
 MACROFAB_ZIP = $(_OUTDIR)/${PCBBASE}_${VERSION}_macrofab.zip

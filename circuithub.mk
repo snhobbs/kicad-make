@@ -1,3 +1,6 @@
+# Circuit Hub takes IPC2581 files but they need to be given the extension .cvg
+# They will read the MPN from the IPC2581 file but will also take CSV BOMS.
+
 CIRCUITHUB_DIR = $(_OUTDIR)/circuithub
 
 $(CIRCUITHUB_DIR):

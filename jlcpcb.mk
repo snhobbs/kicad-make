@@ -1,3 +1,7 @@
+# JLCPCB currently only accepts gerbers, BOMs, and centroids
+# Their field matching is poor so it is useful to generate all the files
+# in the exact format they expect.
+
 JLCPCB_DIR = $(_OUTDIR)/jlcpcb
 JLCPCB_GERBERS_DIR = $(JLCPCB_DIR)/gerbers
 JLCPCB_ZIP = $(_OUTDIR)/$(PCBBASE)_$(VERSION)_jlcpcb.zip
