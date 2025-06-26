@@ -1,4 +1,3 @@
-# Base Makefile, there are additional Makefiles for specific output configurations and manufacturers
 #===============================================================
 # Project Information - Ensure variables PROJECT & VERSION are set
 #===============================================================
@@ -258,9 +257,9 @@ manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} gerbers board ipc2581 o
 
 no-drc: documents manufacturing fabzip
 
-centroid: ${CENTROID} ${JLC_CENTROID}
+centroid: ${CENTROID}
 
-boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM} ibom
+boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM}
 
 board: gerbers ${DRILL} ${CENTROID_CSV} boms ${OUTLINE}
 
