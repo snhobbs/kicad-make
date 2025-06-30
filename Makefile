@@ -21,12 +21,10 @@ ASSEMBLY_DIR = ${MANUFACTURING_DIR}/assembly
 GERBER_DIR = ${MANUFACTURING_DIR}/gerbers
 LOGS_DIR = ${_OUTDIR}/logs
 MECH_DIR = ${_OUTDIR}/mechanical
-GERBERPDF_INI=${ROOT_DIR}/board2pdf.config.ini
 
 # Tool paths
 KICADCLI=kicad-cli
 IBOM_SCRIPT=generate_interactive_bom
-BOARD2PDF_SCRIPT=board2pdf
 KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
 
 # Drawing Sheet Paths
@@ -52,7 +50,6 @@ DRC=${LOGS_DIR}/drc.rpt
 # Visualizations
 PDFSCH=${_OUTDIR}/${SCHBASE}_${VERSION}_schematic.pdf
 IBOM=${_OUTDIR}/${PCBBASE}_${VERSION}_interactive_bom.html
-GERBERPDF=${_OUTDIR}/${PCBBASE}_${VERSION}_gerbers.pdf
 
 # BOMS & Assembly
 CENTROID_CSV=${ASSEMBLY_DIR}/centroid.csv
@@ -89,7 +86,6 @@ $(LOGS_DIR) $(MANUFACTURING_DIR) $(ASSEMBLY_DIR) $(GERBER_DIR) $(MECH_DIR) $(OUT
 # Clean Up Generated Files
 #===============================================================
 clean:
-	-rm ${GERBERPDF}
 	-rm ${PDFSCH}
 	-rm ${BOM}
 	-rm ${STEP}
@@ -151,9 +147,6 @@ ${FABZIP}: ${MANUFACTURING_DIR} ${CENTROID_CSV} gerbers ${IPC2581} boms
 ${OUTLINE}: ${PCB} | ${MECH_DIR}
 	${KICADCLI} pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet "$<" -o "$@"
 
-${GERBERPDF}: ${PCB} | ${_OUTDIR}
-	${BOARD2PDF_SCRIPT} "$<" --output "$@" --ini ${GERBERPDF_INI}
-
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
 
@@ -164,11 +157,11 @@ gerbers: ${PCB} | ${GERBER_DIR}
 # Compund Targets
 #===============================================================
 
-.PHONY: release gerbers ipc2581 fabzip drc erc zip step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
+.PHONY: release gerbers ipc2581 fabzip drc erc zip step ibom schematic boms board centroid erc drc testpoints manufacturing no-drc documents
 
 release: erc drc manufacturing fabzip documents
 
-documents: schematic boms gerberpdf ibom step
+documents: schematic boms ibom step
 
 manufacturing: ${GERBER_DIR} ${MECH_DIR} ${ASSEMBLY_DIR} gerbers board ipc2581 testpoints
 	echo "\n\n Manufacturing Files Exported \n\n"
@@ -198,8 +191,6 @@ step: ${STEP}
 ibom: ${IBOM}
 
 schematic: ${PDFSCH}
-
-gerberpdf: ${GERBERPDF}
 
 testpoints: ${TESTPOINT_REPORT}
 
