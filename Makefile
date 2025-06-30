@@ -211,9 +211,10 @@ THIS_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 THIS_DIR := $(dir $(realpath $(THIS_MAKEFILE)))
 
 .PHONY: manufacturing_release 
-manufacturing_release: release macrofab_release jlcpcb_release
+manufacturing_release: release macrofab_release jlcpcb_release circuithub_release
 	# Makes all manufacture releases and adds them to the output directory
 
 include $(THIS_DIR)/jlcpcb.mk
 include $(THIS_DIR)/macrofab.mk
+include $(THIS_DIR)/circuithub.mk
 
