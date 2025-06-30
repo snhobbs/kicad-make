@@ -44,6 +44,7 @@ PCBBASE=$(basename $(notdir ${PCB}))
 SCHBASE=$(basename $(notdir ${SCH}))
 
 BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_BOM.csv
+UNCLUSTERED_BOM=${ASSEMBLY_DIR}/${SCHBASE}_${VERSION}_UnclusteredBOM.csv
 ERC=${LOGS_DIR}/erc.rpt
 DRC=${LOGS_DIR}/drc.rpt
 
@@ -71,6 +72,8 @@ STEP=${MECH_DIR}/${PCBBASE}_${VERSION}.step
 OUTLINE=${MECH_DIR}/board-outline.svg
 
 TIME=$(shell date +%s)
+
+BOMFIELDS="Reference,Value,Footprint,\$${QUANTITY},\$${DNP},Manufacturers Part Number,MPN,Notes"
 
 .PHONY: all clean
 all: release
@@ -101,7 +104,7 @@ clean:
 	-rm ${TESTPOINT_REPORT}
 	-rm -r ${GERBER_DIR}
 	-rmdir ${MECH_DIR}
-	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${GERBER_PDF_DIR} ${LOGS_DIR}
+	-rmdir ${GERBER_DIR} ${ASSEMBLY_DIR} ${MANUFACTURING_DIR} ${LOGS_DIR}
 
 ${TESTPOINT_REPORT}: ${PCB} | ${_OUTDIR}
 	${KICAD_TESTPOINTS_SCRIPT} by-fab-setting --pcb "$<" --out "$@"
@@ -120,7 +123,10 @@ ${PDFSCH} : ${SCH} | ${_OUTDIR}
 	${KICADCLI} sch export pdf --black-and-white --drawing-sheet ${SCH_DRAWING_SHEET} "$<" -o "$@"
 
 ${BOM}: ${SCH} | ${ASSEMBLY_DIR}
-	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},Manufacturers Part Number,MPN,Notes" --group-by="\$${DNP},Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
+	${KICADCLI} sch export bom "$<" --fields ${BOMFIELDS} --group-by="\$${DNP},Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
+
+${UNCLUSTERED_BOM}: ${SCH} | ${ASSEMBLY_DIR}
+	${KICADCLI} sch export bom "$<" --fields ${BOMFIELDS} --ref-range-delimiter="" -o "$@"
 
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB} | ${GERBER_DIR}
@@ -170,7 +176,7 @@ no-drc: documents manufacturing fabzip
 
 centroid: ${CENTROID}
 
-boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM}
+boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM} ${UNCLUSTERED_BOM}
 
 board: gerbers ${DRILL} ${CENTROID_CSV} boms ${OUTLINE}
 
