@@ -118,6 +118,8 @@ PDF_GERBER_LAYERS:= \
 PDF_GERBER_LAYERS_CSV:= $(subst $(SPACE),$(COMMA),$(PDF_GERBER_LAYERS))
 PDF_GERBER_FILES:= $(foreach f,${PDF_GERBER_LAYERS},${GERBER_PDF_DIR}/${PCBBASE}-$(subst .,_,$(f)).pdf)
 
+BOMFIELDS="Reference,Value,Footprint,\$${QUANTITY},\$${DNP},Manufacturers Part Number,MPN,Notes"
+
 .PHONY: all clean
 all: release
 
@@ -172,7 +174,10 @@ ${PDFSCH} : ${SCH} | ${_OUTDIR}
 	${KICADCLI} sch export pdf --black-and-white --drawing-sheet ${SCH_DRAWING_SHEET} "$<" -o "$@"
 
 ${BOM}: ${SCH} | ${ASSEMBLY_DIR}
-	${KICADCLI} sch export bom "$<" --fields "Reference,Value,Footprint,\$${QUANTITY},\$${DNP},Manufacturers Part Number,MPN,Notes" --group-by="\$${DNP},Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
+	${KICADCLI} sch export bom "$<" --fields ${BOMFIELDS} --group-by="\$${DNP},Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
+
+${UNCLUSTERED_BOM}: ${SCH} | ${ASSEMBLY_DIR}
+	${KICADCLI} sch export bom "$<" --fields ${BOMFIELDS} --ref-range-delimiter="" -o "$@"
 
 # Complains about output needing to be a directory, work around this
 ${DRILL}: ${PCB} | ${GERBER_DIR}
@@ -258,7 +263,7 @@ no-drc: documents manufacturing fabzip
 
 centroid: ${CENTROID}
 
-boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM}
+boms: ${ASSEMBLY_DIR} ${BOM} ${ASSEMBLY_BOM} ${UNCLUSTERED_BOM}
 
 board: gerbers ${DRILL} ${CENTROID_CSV} boms ${OUTLINE}
 
