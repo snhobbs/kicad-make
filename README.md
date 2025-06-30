@@ -17,6 +17,12 @@ in v8+. Depending on how you installed KiCad this could be a whole bunch of plac
 to your path.
 
 A Dockerfile is included to make setup easier.
+A description of how to use it and why is described [here](https://www.maskset.net/blog/2025/06/30/using-kicad-with-docker-to-manage-and-upgrade-release-versions/)
+
+```bash
+docker build -f Dockerfile --build-arg UID=$(id -u) \
+--build-arg GID=$(id -g) --build-arg USERNAME=$(whoami) -t kicad9 .
+```
 
 ### kicad-cli for different installation types
 **flatpak**
