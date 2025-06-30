@@ -27,6 +27,7 @@ RUN python3 -m venv /opt/venv
 # Activate the virtual environment and install Python packages
 RUN /opt/venv/bin/pip install --upgrade pip \
     && /opt/venv/bin/pip install git+https://github.com/snhobbs/board2pdf.git@main \
+    && /opt/venv/bin/pip install git+https://github.com/snhobbs/kicad-xyrs.git@master \
     && /opt/venv/bin/pip install git+https://github.com/snhobbs/kicad-testpoints.git@master \
     && /opt/venv/bin/pip install git+https://github.com/snhobbs/InteractiveHtmlBom.git@master
 
