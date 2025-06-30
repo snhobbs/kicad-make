@@ -1,43 +1,48 @@
-# Base image
 FROM kicad/kicad:9.0
+
 ENV DEBIAN_FRONTEND=noninteractive
-# Install required packages
-RUN sudo apt-get update
-RUN sudo apt-get install -y \
-    git \
-    libx11-dev \
-    x11-apps \
-    make \
-    python3.11 \
+
+# Create a non-root user
+ARG ORIGINALUSER=kicad
+ARG USERNAME=user
+ARG UID=1000
+ARG GID=1000
+
+USER root
+RUN usermod -l $USERNAME -d /home/$USERNAME -m -s /bin/bash $ORIGINALUSER  \
+    && groupmod -n $USERNAME $ORIGINALUSER \
+    && apt-get update && apt-get install -y sudo \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Install Python, pip, and venv
+RUN apt-get update && apt-get install -y \
+    python3 \
     python3-pip \
-    python3-dev \
-    python3-venv
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN sudo apt-get install -y xvfb
+# Create a Python virtual environment
+RUN python3 -m venv /opt/venv
 
-# install pdfunite
-RUN sudo apt-get install -y poppler-utils
+# Activate the virtual environment and install Python packages
+RUN /opt/venv/bin/pip install --upgrade pip \
+    && /opt/venv/bin/pip install git+https://github.com/snhobbs/kicad-testpoints.git \
+    && /opt/venv/bin/pip install git+https://github.com/snhobbs/InteractiveHtmlBom.git
 
-# Set user and group
-ARG user=kicad
-ARG INSTALL_DIR=/usr/share
-# Set the working directory
-WORKDIR ${INSTALL_DIR}
+# Install make
+RUN apt-get update && apt-get install -y \
+    make \
+    xvfb \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Clone kicad-make and check out desired version
-RUN sudo chown ${user} ${INSTALL_DIR}
+# Set environment variables to use the virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH="/usr/lib/python3/dist-packages"
 
-# Create and activate venv
-RUN cd ${INSTALL_DIR} && python3.11 -m venv venv --system-site-packages
+# Set environment variables for the new user
+ENV HOME=/home/${USERNAME}
+WORKDIR /home/${USERNAME}
+USER ${USERNAME}
 
-# Add venv to path
-ENV PATH="${INSTALL_DIR}/venv/bin/:$PATH"
-
-RUN git clone https://github.com/snhobbs/kicad-make/ --recurse-submodules --single-branch -b v9 kicad-make
-RUN . /usr/share/venv/bin/activate && cd /usr/share/kicad-make/libs/InteractiveHtmlBom && pip install .
-RUN . /usr/share/venv/bin/activate && cd /usr/share/kicad-make/libs/kicad-testpoints && pip install .
-
-WORKDIR /home/${user}
-
-# Default command
 CMD ["bash"]
