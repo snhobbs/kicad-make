@@ -37,6 +37,11 @@ RUN apt-get update && apt-get install -y \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y \
+    fonts-freefont-ttf \
+        && rm -rf /var/lib/apt/lists/*
+
+
 # Set environment variables to use the virtual environment
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/usr/lib/python3/dist-packages"

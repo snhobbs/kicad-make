@@ -178,11 +178,11 @@ $(TESTPOINT_REPORT): $(PCB) | $(_OUTDIR)
 
 # Move the log file to the final location if the command succeeds so it doesn't rerun
 $(DRC): $(PCB) $(ERC) | $(LOGS_DIR)
-	$(KICADCLI) pcb drc $(DRC_FLAGS) "$<" -o $(LOGS_DIR)/drc-out.log
+	$(KICADCLI) pcb drc $(DRC_FLAGS) "$<" -o $(LOGS_DIR)/drc-out.log || { cat "$(LOGS_DIR)/drc-out.log"; exit 1; }
 	mv $(LOGS_DIR)/drc-out.log "$@"
 
 $(ERC): $(SCH) | $(LOGS_DIR)
-	$(KICADCLI) sch erc $(ERC_FLAGS) "$<" -o $(LOGS_DIR)/erc-out.log
+	$(KICADCLI) sch erc $(ERC_FLAGS) "$<" -o $(LOGS_DIR)/erc-out.log || { cat  "$(LOGS_DIR)/erc-out.log"; exit 1; }
 	mv $(LOGS_DIR)/erc-out.log "$@"
 
 # Generates schematic

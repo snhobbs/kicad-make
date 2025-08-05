@@ -1,0 +1,44 @@
+name: KiCad Release Builder
+description: Build KiCad project outputs inside a Docker container on tag push
+author: Simon Hobbs
+inputs:
+  path:
+    description: Path to the kicad project
+    required: true
+    default: ./
+  project:
+    description: The base name of the KiCad board (without extension)
+    required: true
+    default: myboard
+  version:
+    description: Version number
+    required: false
+    default: ${{ github.sha }}
+  output_path:
+    description: Build directory
+    required: false
+    default: build
+  make-target:
+    description: Target to invoke in the Makefile
+    required: false
+    default: all
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker
+      shell: bash
+      run: |
+        docker build -t kicad-release .
+
+    - name: Run Makefile in container
+      shell: bash
+      run: |
+        docker run --rm \
+          -v "$PWD:/workspace" \
+          -w /workspace \
+          -e PROJECT=${{ inputs.project }} \
+          -e VERSION=${{ inputs.version }} \
+          -e OUTDIR=${{ inputs.output_path }} \
+          -e DIR=${{ inputs.path }} \
+          kicad-release \
+          make ${{ inputs.make-target }}
