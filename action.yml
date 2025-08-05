@@ -28,17 +28,19 @@ runs:
     - name: Set up Docker
       shell: bash
       run: |
-        docker build -t kicad-release .
+        docker build -t kicad-release "${{ github.action_path }}"
 
     - name: Run Makefile in container
       shell: bash
       run: |
         docker run --rm \
           -v "$PWD:/workspace" \
-          -w /workspace \
+          -v "$GITHUB_WORKSPACE/${{ inputs.path }}:/project" \
+          -v "$GITHUB_WORKSPACE/${{ inputs.output_path }}:/output" \
+          -w /project \
+          -e OUTDIR=/output \
           -e PROJECT=${{ inputs.project }} \
           -e VERSION=${{ inputs.version }} \
-          -e OUTDIR=${{ inputs.output_path }} \
           -e DIR=${{ inputs.path }} \
           kicad-release \
           make ${{ inputs.make-target }}
