@@ -120,7 +120,7 @@ clean:
 	-rmdir --ignore-fail-on-non-empty $(MECH_DIR) $(GERBER_DIR) $(ASSEMBLY_DIR) $(MANUFACTURING_DIR) $(LOGS_DIR)
 
 $(TESTPOINT_REPORT): $(PCB) | $(_OUTDIR)
-	$(KICAD_TESTPOINTS_SCRIPT) by-fab-setting --pcb "$<" --out "$@"
+	-$(KICAD_TESTPOINTS_SCRIPT) by-fab-setting --pcb "$<" --out "$@"
 
 # Move the log file to the final location if the command succeeds so it doesn't rerun
 $(DRC): $(PCB) $(ERC) | $(LOGS_DIR)

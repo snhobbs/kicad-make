@@ -17,6 +17,12 @@ in v8+. Depending on how you installed KiCad this could be a whole bunch of plac
 to your path.
 
 A Dockerfile is included to make setup easier.
+A description of how to use it and why is described [here](https://www.maskset.net/blog/2025/06/30/using-kicad-with-docker-to-manage-and-upgrade-release-versions/)
+
+```bash
+docker build -f Dockerfile --build-arg UID=$(id -u) \
+--build-arg GID=$(id -g) --build-arg USERNAME=$(whoami) -t kicad9 .
+```
 
 ### kicad-cli for different installation types
 **flatpak**
@@ -50,7 +56,6 @@ needed then remove the related lines.
 
 ```sh
 git submodule update --init --recursive
-cd libs/Board2Pdf/ && pip install .
 cd libs/InteractiveHtmlBom/ && pip install .
 ```
 
@@ -66,7 +71,7 @@ cd libs/InteractiveHtmlBom/ && pip install .
 + STEP model of board
 + centroid w/ KiCad and JLCPCB format
 + Full BOM and JLCPCB version
-+ PDF gerber report with board2pdf
++ PDF gerber report
 
 ## Notes
 ### Semantic Versioning
@@ -99,7 +104,6 @@ make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version num
 ```bash
 make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> schematic
 ```
-
 
 ## Example Usage
 ```bash
