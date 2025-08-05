@@ -1,0 +1,29 @@
+ARG BASE_IMAGE=snhobbs/kicad-make:8.0
+FROM ${BASE_IMAGE}
+
+ARG USERNAME=kicad
+ARG UID=1000
+ARG GID=1000
+
+# Create a non-root user
+ARG ORIGINALUSER=kicad
+ARG USERNAME=kicad
+ARG UID=1000
+ARG GID=1000
+
+USER root
+RUN usermod -l $USERNAME -d /home/$USERNAME -m -s /bin/bash $ORIGINALUSER  \
+    && groupmod -n $USERNAME $ORIGINALUSER \
+    && apt-get update && apt-get install -y sudo \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Set environment variables for the new user
+ENV HOME=/home/${USERNAME}
+WORKDIR /home/${USERNAME}
+USER ${USERNAME}
+
+RUN kicad_testpoints --version
+RUN kicad_xyrs --version
+RUN xvfb-run generate_interactive_bom --version
+
+CMD ["bash"]

@@ -1,0 +1,23 @@
+name: Build KiCad Project on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./ #snhobbs/kicad-make@v8
+        with:
+          project: cap_multiplier_tile
+          path: ./demo
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kicad-outputs
+          path: build/**

@@ -2,17 +2,7 @@ FROM kicad/kicad:8.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Create a non-root user
-ARG ORIGINALUSER=kicad
-ARG USERNAME=$(whoami)
-ARG UID=1000
-ARG GID=1000
-
 USER root
-RUN usermod -l $USERNAME -d /home/$USERNAME -m -s /bin/bash $ORIGINALUSER  \
-    && groupmod -n $USERNAME $ORIGINALUSER \
-    && apt-get update && apt-get install -y sudo \
-    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Install Python, pip, and venv
 RUN apt-get update && apt-get install -y \
@@ -37,17 +27,10 @@ RUN apt-get update && apt-get install -y \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y \
+    fonts-freefont-ttf \
+        && rm -rf /var/lib/apt/lists/*
+
 # Set environment variables to use the virtual environment
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/usr/lib/python3/dist-packages"
-
-# Set environment variables for the new user
-ENV HOME=/home/${USERNAME}
-WORKDIR /home/${USERNAME}
-USER ${USERNAME}
-
-RUN kicad_testpoints --version
-RUN kicad_xyrs --version
-RUN xvfb-run generate_interactive_bom --version
-
-CMD ["bash"]
