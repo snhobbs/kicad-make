@@ -68,7 +68,75 @@ RENDERS:= ${RENDER_DIR}/Render_TOP.png \
 		   ${RENDER_DIR}/Render_LEFT.png \
 		   ${RENDER_DIR}/Render_RIGHT.png \
 		   ${RENDER_DIR}/Render_FRONT.png \
-		   ${RENDER_DIR}/Render_BACK.png
+		   ${RENDER_DIR}/Render_BACK.png \
+		   ${RENDER_DIR}/Render_ANGLED_TOP.png \
+		   ${RENDER_DIR}/Render_ANGLED_BOTTOM.png
+
+# Angled renders: perspective view tilted by RENDER_ANGLE ("X,Y,Z" degrees)
+# from the top or bottom view; lower RENDER_ANGLED_ZOOM if the board is cropped.
+RENDER_ANGLE ?= -45,0,45
+RENDER_ANGLED_ZOOM ?= 0.85
+
+# Studio lighting: angled side lights do most of the work because light that
+# hits the glossy solder mask head-on (camera, and top/bottom in top/bottom
+# views) reflects straight into the camera and washes the colour out. A high
+# elevation keeps their shadows short; the dim camera light fills them in.
+# Intensities are 0-1 (or "R,G,B"), elevation is in degrees above the board.
+RENDER_LIGHT_CAMERA ?= 0.25
+RENDER_LIGHT_TOP ?= 0.1
+RENDER_LIGHT_BOTTOM ?= 0.1
+RENDER_LIGHT_SIDE ?= 0.25
+RENDER_LIGHT_SIDE_ELEVATION ?= 70
+RENDER_LIGHTS ?= --light-camera ${RENDER_LIGHT_CAMERA} \
+		--light-top ${RENDER_LIGHT_TOP} \
+		--light-bottom ${RENDER_LIGHT_BOTTOM} \
+		--light-side ${RENDER_LIGHT_SIDE} \
+		--light-side-elevation ${RENDER_LIGHT_SIDE_ELEVATION}
+RENDER_OPTS ?= --background transparent --use-board-stackup-colors \
+		--quality high ${RENDER_LIGHTS}
+
+# Straight-down top/bottom views: the board is flat and faces the camera, so
+# any head-on light puts the same highlight on every point of the mask and
+# the whole board goes milky. Light these from the sides only.
+RENDER_FLAT_LIGHT_CAMERA ?= 0
+RENDER_FLAT_LIGHT_TOP ?= 0
+RENDER_FLAT_LIGHT_BOTTOM ?= 0
+RENDER_FLAT_LIGHT_SIDE ?= 0.32
+RENDER_FLAT = $(foreach side,TOP BOTTOM,${RENDER_DIR}/Render_$(side).png \
+		${_OUTDIR}/${PCBBASE}_${VERSION}_Render_$(side).png)
+$(RENDER_FLAT): RENDER_LIGHT_CAMERA = ${RENDER_FLAT_LIGHT_CAMERA}
+$(RENDER_FLAT): RENDER_LIGHT_TOP = ${RENDER_FLAT_LIGHT_TOP}
+$(RENDER_FLAT): RENDER_LIGHT_BOTTOM = ${RENDER_FLAT_LIGHT_BOTTOM}
+$(RENDER_FLAT): RENDER_LIGHT_SIDE = ${RENDER_FLAT_LIGHT_SIDE}
+
+# kicad-cli takes the material mode from the 3D viewer settings, and "CAD
+# colors" renders parts flat grey. render-check warns if it isn't Realistic.
+KICAD_VERSION = $(shell $(KICADCLI) version 2>/dev/null | cut -d. -f1-2)
+KICAD_USER_CONFIG = $(or $(KICAD_CONFIG_HOME),$(or $(XDG_CONFIG_HOME),$(HOME)/.config)/kicad)
+VIEWER_3D_CONFIG = $(KICAD_USER_CONFIG)/$(KICAD_VERSION)/3d_viewer.json
+
+# Render presets override the stackup's solder mask, silkscreen and copper
+# finish in a throwaway copy of the board, so renders can look like a given
+# fab option without editing the board. "board" renders the stackup as is.
+# Add your own with RENDER_PRESET_<name> = --mask ... --silk ... --finish ...
+# Colours are KiCad names or \#RRGGBBAA (AA = opacity, FF is fully opaque).
+RENDER_PRESET ?= board
+RENDER_PRESET_green-enig ?= --mask "\#0B5A26FF" --silk "White" --finish "ENIG"
+RENDER_PRESET_green-hasl ?= --mask "\#0B5A26FF" --silk "White" --finish "HAL lead-free"
+RENDER_PRESET_black-enig ?= --mask "\#141414F5" --silk "White" --finish "ENIG"
+RENDER_PRESET_blue-enig ?= --mask "\#1B4A9CE6" --silk "White" --finish "ENIG"
+RENDER_PRESET_ARGS = $(RENDER_PRESET_$(RENDER_PRESET))
+ifeq ($(RENDER_PRESET),board)
+RENDER_PCB = $(PCB)
+else
+ifeq ($(strip $(RENDER_PRESET_ARGS)),)
+$(error Unknown RENDER_PRESET "$(RENDER_PRESET)", define RENDER_PRESET_$(RENDER_PRESET))
+endif
+# The copy sits next to the board so ${KIPRJMOD} 3D model paths still resolve
+RENDER_PCB = $(_DIR)/.$(PROJECT)-render.kicad_pcb
+RENDER_PRO = $(_DIR)/.$(PROJECT)-render.kicad_pro
+.INTERMEDIATE: $(RENDER_PCB) $(RENDER_PRO)
+endif
 
 # BOMS & Assembly
 CENTROID_CSV=$(ASSEMBLY_DIR)/centroid.csv
@@ -85,6 +153,23 @@ NETLIST=$(_OUTDIR)/netlist_$(PCBBASE)_$(VERSION).csv
 
 # MECHANICAL
 STEP=$(MECH_DIR)/$(PCBBASE)_$(VERSION).step
+
+# 3D models for placing this board on another (e.g. a daughter board on its
+# motherboard), exported from the render preset copy so colours match the
+# renders. The VRML carries mask, silkscreen and finish colours for KiCad
+# renders; the STEP of the same name replaces it in the motherboard's STEP
+# export (--subst-models). Both share MODEL_ORIGIN ("XxYmm", board
+# coordinates), which defaults to this board's grid origin: put the grid
+# origin where the motherboard footprint's anchor is.
+MODEL_ORIGIN ?= $(shell sed -n 's/.*(grid_origin \([-0-9.]*\) \([-0-9.]*\)).*/\1x\2mm/p' "$(PCB)" 2>/dev/null | head -n 1)
+MODEL_BASE=$(MECH_DIR)/$(PCBBASE)_$(VERSION)_model
+STEP_MODEL=$(MODEL_BASE).step
+VRML_MODEL=$(MODEL_BASE).wrl
+STEP_MODEL_FLAGS ?= --include-soldermask --include-silkscreen --include-pads \
+		--no-dnp --subst-models
+# KiCad footprint VRML models are in tenths of an inch
+VRML_MODEL_FLAGS ?= --units tenths --no-dnp
+
 OUTLINE=$(MECH_DIR)/board-outline.svg
 
 COMMA:= ,
@@ -154,6 +239,7 @@ clean:
 	-rm ${PDFSCH}
 	-rm ${BOM}
 	-rm ${STEP}
+	-rm ${STEP_MODEL} ${VRML_MODEL}
 	-rm ${CENTROID_GERBER}
 	-rm ${CENTROID_CSV}
 	-rm ${IBOM}
@@ -165,6 +251,7 @@ clean:
 	-rm ${IPC2581}
 	-rm ${TESTPOINT_REPORT}
 	-rm ${RENDERS}
+	-rm -f $(_DIR)/.$(PROJECT)-render.kicad_pcb $(_DIR)/.$(PROJECT)-render.kicad_pro
 	-rm ${GERBER_PDF_DIR}/*.pdf
 	-rm ${GENCAD}
 	-rm ${ODB}
@@ -206,6 +293,17 @@ $(CENTROID_CSV): $(PCB) | $(ASSEMBLY_DIR)
 $(STEP): $(PCB) | $(MECH_DIR)
 	$(KICADCLI) pcb export step "$<" --drill-origin --subst-models -f -o "$@"
 
+check-model-origin:
+ifeq ($(strip $(MODEL_ORIGIN)),)
+	$(error No grid origin on $(PCB): set one where the motherboard footprint's anchor is, or pass MODEL_ORIGIN=XxYmm)
+endif
+
+$(STEP_MODEL): $(RENDER_PCB) $(RENDER_PRO) | check-model-origin $(MECH_DIR)
+	$(KICADCLI) pcb export step "$<" --user-origin "$(MODEL_ORIGIN)" $(STEP_MODEL_FLAGS) -f -o "$@"
+
+$(VRML_MODEL): $(RENDER_PCB) $(RENDER_PRO) | check-model-origin $(MECH_DIR)
+	$(KICADCLI) pcb export vrml "$<" --user-origin "$(MODEL_ORIGIN)" $(VRML_MODEL_FLAGS) -f -o "$@"
+
 # Screen size required for running headless
 # https://github.com/openscopeproject/InteractiveHtmlBom/wiki/Tips-and-Tricks
 $(IBOM): $(PCB) | $(ASSEMBLY_DIR)
@@ -219,8 +317,31 @@ $(FABZIP): $(MANUFACTURING_DIR) $(CENTROID_CSV) gerbers $(IPC2581) boms
 
 $(OUTLINE): $(PCB) | $(MECH_DIR)
 	$(KICADCLI) pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet "$<" -o "$@"
-${RENDER_DIR}/Render_%.png: ${PCB} | ${_OUTDIR} ${RENDER_DIR}
-	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) --background transparent --quality high "$<" -o "$@"
+${RENDER_DIR}/Render_%.png: ${RENDER_PCB} ${RENDER_PRO} | ${_OUTDIR} ${RENDER_DIR} render-check
+	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) ${RENDER_OPTS} "$<" -o "$@"
+
+# Shorter stem than Render_%.png, so make prefers this rule for angled renders
+${RENDER_DIR}/Render_ANGLED_%.png: ${RENDER_PCB} ${RENDER_PRO} | ${_OUTDIR} ${RENDER_DIR} render-check
+	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) ${RENDER_OPTS} \
+		--perspective --rotate "${RENDER_ANGLE}" --zoom ${RENDER_ANGLED_ZOOM} "$<" -o "$@"
+
+# Material mode 0 is Realistic, 1 Solid colors, 2 CAD colors
+.PHONY: render-check
+render-check:
+	@mode=$$(grep -o '"material_mode": *[0-9]*' "$(VIEWER_3D_CONFIG)" 2>/dev/null | grep -o '[0-9]*$$'); \
+	if [ -n "$$mode" ] && [ "$$mode" != 0 ]; then \
+		echo "WARNING: 3D viewer material mode is $$mode, not Realistic (0), in $(VIEWER_3D_CONFIG)." >&2; \
+		echo "WARNING: Renders will have flat or grey parts. Set Material properties to Realistic in the KiCad 3D viewer preferences." >&2; \
+	fi
+
+# Board copy with the render preset applied to its stackup
+ifneq ($(RENDER_PCB),$(PCB))
+$(RENDER_PCB): $(PCB)
+	python3 $(ROOT_DIR)/scripts/render_preset.py "$<" "$@" $(RENDER_PRESET_ARGS)
+
+$(RENDER_PRO): $(PCB)
+	if [ -e "$(_DIR)/$(PROJECT).kicad_pro" ]; then cp "$(_DIR)/$(PROJECT).kicad_pro" "$@"; else echo '{}' > "$@"; fi
+endif
 
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
@@ -246,11 +367,10 @@ ${GERBERPDF}: ${PCB} | ${GERBER_PDF_DIR}
 			touch "$@"; \
 	  fi
 
-${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR}
+${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${RENDER_PCB} ${RENDER_PRO} | ${_OUTDIR} render-check
 	${KICADCLI} pcb render \
 		--side $(shell echo $* | tr A-Z a-z) \
-		--background transparent \
-		--quality high "$<" -o "$@"
+		${RENDER_OPTS} "$<" -o "$@"
 
 ${GENCAD}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export gencad "$<" -o "$@"
@@ -265,7 +385,7 @@ gerbers: ${PCB} | ${GERBER_DIR}
 # Compund Targets
 #===============================================================
 
-.PHONY: release gerbers odb gencad ipc2581 fabzip drc erc step ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
+.PHONY: release gerbers odb gencad ipc2581 fabzip drc erc step step-model vrml models check-model-origin ibom schematic boms board gerberpdf centroid erc drc testpoints manufacturing no-drc documents
 
 release: erc drc manufacturing fabzip documents
 
@@ -302,6 +422,12 @@ erc: $(ERC)
 fabzip: $(FABZIP)
 
 step: $(STEP)
+
+step-model: $(STEP_MODEL)
+
+vrml: $(VRML_MODEL)
+
+models: step-model vrml
 
 ibom: $(IBOM)
 
