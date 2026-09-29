@@ -46,8 +46,30 @@ IBOM_SCRIPT=generate_interactive_bom
 KICAD_TESTPOINTS_SCRIPT=kicad_testpoints
 
 # Drawing Sheet Paths
-SCH_DRAWING_SHEET = $(ROOT_DIR)/SchDrawingSheet.kicad_wks
-PCB_DRAWING_SHEET = $(SCH_DRAWING_SHEET)
+DEFAULT_DRAWING_SHEET = 
+SCH_DRAWING_SHEET ?= $(DEFAULT_DRAWING_SHEET)
+PCB_DRAWING_SHEET ?= $(SCH_DRAWING_SHEET)
+
+# A sheet passed in that doesn't exist is an error. The default sheet missing
+# (another machine, a container without the mount) falls back to the project's
+# sheet with a warning.
+define check_drawing_sheet
+ifneq ($$($(1)),)
+ifeq ($$(wildcard $$($(1))),)
+ifeq ($$(origin $(1)),file)
+$$(warning $(1) not found, using the project drawing sheet: $$($(1)))
+$(1) :=
+else
+$$(error $(1) not found: $$($(1)))
+endif
+endif
+endif
+endef
+$(eval $(call check_drawing_sheet,SCH_DRAWING_SHEET))
+$(eval $(call check_drawing_sheet,PCB_DRAWING_SHEET))
+
+SCH_DRAWING_SHEET_FLAG = $(if $(SCH_DRAWING_SHEET),--drawing-sheet "$(SCH_DRAWING_SHEET)")
+PCB_DRAWING_SHEET_FLAG = $(if $(PCB_DRAWING_SHEET),--drawing-sheet "$(PCB_DRAWING_SHEET)")
 
 #===============================================================
 # Generated File Paths
@@ -274,7 +296,7 @@ $(ERC): $(SCH) | $(LOGS_DIR)
 
 # Generates schematic
 $(PDFSCH) : $(SCH) | $(_OUTDIR)
-	$(KICADCLI) sch export pdf --black-and-white --drawing-sheet $(SCH_DRAWING_SHEET) "$<" -o "$@"
+	$(KICADCLI) sch export pdf --black-and-white $(SCH_DRAWING_SHEET_FLAG) "$<" -o "$@"
 
 $(BOM): $(SCH) | $(ASSEMBLY_DIR)
 	$(KICADCLI) sch export bom "$<" --fields $(BOMFIELDS) --group-by="\$$(DNP),Value,Footprint,Manufacturers Part Number" --ref-range-delimiter="" -o "$@"
@@ -351,7 +373,7 @@ ${GERBERPDF}: ${PCB} | ${GERBER_PDF_DIR}
 		--cl "Edge.Cuts" \
 		-l ${PDF_GERBER_LAYERS_CSV} \
 		-o ${GERBER_PDF_DIR} \
-		--drawing-sheet ${PCB_DRAWING_SHEET} \
+		$(PCB_DRAWING_SHEET_FLAG) \
 		--mode-separate \
 		--include-border-title \
 		--sketch-pads-on-fab-layers

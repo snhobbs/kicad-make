@@ -111,6 +111,16 @@ This is the default target and generates everything.
 make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number>
 ```
 
+### Drawing sheet
+
+To use a custom style sheet, pass a `.kicad_wks` file:
+
+```bash
+make -f kicad-make/Makefile PROJECT=<name> VERSION=<version> SCH_DRAWING_SHEET=path/to/sheet.kicad_wks
+```
+
+`PCB_DRAWING_SHEET` follows `SCH_DRAWING_SHEET` and can be set separately. Set `SCH_DRAWING_SHEET=` (empty) to use the sheet from the project's Schematic Setup and Board Setup. A sheet you pass that doesn't exist stops the build. If the default sheet is missing, for example in a container without it mounted, make warns and uses the project's sheet.
+
 ### Skip DRC Check
 
 Try to not do this too often... Exports everything, skipping ERC and DRC check.

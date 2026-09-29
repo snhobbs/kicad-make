@@ -26,6 +26,10 @@ RUN apt-get update && apt-get install -y \
 	python3-pil \
 	&& rm -rf /var/lib/apt/lists/*
 
+# uv, for project environments built on the system Python (e.g. the flex
+# board generator's setup.sh)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 # Create a Python virtual environment
 RUN python3 -m venv /opt/venv
 
