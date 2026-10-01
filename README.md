@@ -65,7 +65,7 @@ git submodule update --init --recursive
 cd libs/InteractiveHtmlBom/ && pip install .
 ```
 
-Render presets (`RENDER_PRESET`) need `sexpdata`: `pip install sexpdata`.
+Fab settings (`scripts/fab_settings.py`) need `sexpdata` and `pyyaml`: `pip install sexpdata pyyaml`.
 
 ## Features (v9)
 
@@ -168,12 +168,11 @@ docker build -t kicad-env .
 From the kicad-make repo directory run:
 
 ```bash
-docker run -v $(pwd):/home/kicad -it --rm --name t
-asd kicad-env make -f /usr/share/kicad-make/Makefile PROJECT=jlcpcb-4Layer-JLC04161H-2116D VER
-SION=0.1.X DIR=kicad-setting-boards/jlcpcb-4Layer-JLC04161H-2116D no-drc
+docker run -v $(pwd):/home/kicad -it --rm --name kicad-make kicad-env \
+    make -f /usr/share/kicad-make/Makefile PROJECT=<project> VERSION=0.1.X DIR=<project dir> no-drc
 ```
 
-This uses the settings board as an example build and uses the makefile in the Docker image.
+This uses the makefile in the Docker image.
 
 ## High Level Targets
 
@@ -203,23 +202,71 @@ This uses the settings board as an example build and uses the makefile in the Do
 | `gencad`        | Generates GEN-CAD files.                                                                      |
 | `odb`           | Generates ODB++ files.                                                                        |
 
-## Render presets
+## Fab settings
 
-Renders use the board stackup colours. `RENDER_PRESET` overrides the solder
-mask, silkscreen and copper finish in a temporary copy of the board, so
-renders can show a fab option without editing the board:
+`fab-settings/` holds three independent sets of YAML files, so any stackup can
+be combined with any colours and rules (keep to combinations your fab offers):
+
+| Directory | What | Written to |
+| --- | --- | --- |
+| `stackups/` | Copper and dielectric thicknesses, materials, dielectric constants, mask thickness, board body colour, optional fab impedance widths | `.kicad_pcb` stackup, layer table, board thickness |
+| `colors/` | Solder mask and silkscreen colours, copper finish | `.kicad_pcb` stackup |
+| `rules/` | Fab minimums (Constraints), Default net class, solder mask expansion and minimum web | `.kicad_pro`, `.kicad_pcb` |
+
+`sizes.yaml` lists the predefined track widths written with every stackup:
+6, 8 and 10 mil, 0.5, 1 and 2 mm, plus the 50 and 100 ohm top layer widths.
+Those are solved as uncoated surface microstrip over the top dielectric unless
+the stackup gives `impedance_widths` from the fab's calculator; widths under
+the rules' minimum track width are left out with a warning.
+
+Stackup and colours drive the 3D viewer, `kicad-cli` renders
+(`--use-board-stackup-colors`), and the STEP and VRML exports, so set them on
+the board for the models to come out right.
+
+### Applying to a board
+
+`scripts/fab_settings.py` edits the board (and its project for rules) in
+place. Inner copper layers are added or removed to match a stackup; it refuses
+to remove one that still has items on it. Only the edited settings change, so
+the board diffs cleanly. Close the board in KiCad first, or KiCad will
+overwrite it on save.
 
 ```bash
-make renders RENDER_PRESET=green-enig
+scripts/fab_settings.py list
+scripts/fab_settings.py apply project.kicad_pcb --stackup jlcpcb-4l-fr4-1.6mm --colors green --rules jlcpcb-4l
+scripts/fab_settings.py apply project.kicad_pcb --colors black
 ```
 
-Built-in presets: `board` (default, stackup unchanged), `green-enig`,
-`green-hasl`, `black-enig`, `blue-enig`. Define your own in the project
-Makefile, colours as KiCad names or `\#RRGGBBAA`:
+Names can also be paths to your own `.yaml` files.
 
-```make
-RENDER_PRESET_purple-enig = --mask "\#4B1F6FF0" --silk "White" --finish "ENIG"
+### Template boards for Import Settings
+
+`kicad-setting-boards/` has a board for each entry in its `templates.yaml`
+(stackup + colours + rules). In KiCad use Board Setup > Import Settings and
+pick one, ticking the stackup, constraints, net classes, predefined sizes and
+solder mask options. The boards are committed; after changing `fab-settings/`
+or `templates.yaml` regenerate them with their own Makefile and commit the
+result:
+
+```bash
+make -C kicad-setting-boards
 ```
+
+### Notes on the data
+
+- Flex coverlay is modelled as the solder mask, which is where KiCad renders it.
+- JLCPCB doesn't publish layer-by-layer builds for 4-layer flex or the 0.8 and
+  1.0 mm 4-layer FR4; those stackups are derived and say so.
+- Rules use the fab's no-surcharge limits; values a fab doesn't publish are
+  KiCad defaults and are commented.
+- Needs `sexpdata` and `pyyaml`; the templates also need KiCad's `pcbnew`
+  Python module.
+
+## Renders
+
+Renders, the STEP and the VRML models use the board's own stackup colours:
+set them with `scripts/fab_settings.py apply --colors` or by importing a
+template board (see [Fab settings](#fab-settings)).
 
 Renders include angled top and bottom views (`Render_ANGLED_TOP.png`,
 `Render_ANGLED_BOTTOM.png`), tilted by `RENDER_ANGLE` (default `-45,0,45`)

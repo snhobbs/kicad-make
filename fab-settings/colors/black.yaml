@@ -1,0 +1,6 @@
+# Colours are KiCad names or "#RRGGBBAA" (AA = opacity, FF is fully opaque).
+name: Black
+description: Black mask, white silkscreen, ENIG
+solder_mask: "#141414F5"
+silkscreen: White
+copper_finish: ENIG

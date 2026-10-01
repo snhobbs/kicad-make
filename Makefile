@@ -137,29 +137,6 @@ KICAD_VERSION = $(shell $(KICADCLI) version 2>/dev/null | cut -d. -f1-2)
 KICAD_USER_CONFIG = $(or $(KICAD_CONFIG_HOME),$(or $(XDG_CONFIG_HOME),$(HOME)/.config)/kicad)
 VIEWER_3D_CONFIG = $(KICAD_USER_CONFIG)/$(KICAD_VERSION)/3d_viewer.json
 
-# Render presets override the stackup's solder mask, silkscreen and copper
-# finish in a throwaway copy of the board, so renders can look like a given
-# fab option without editing the board. "board" renders the stackup as is.
-# Add your own with RENDER_PRESET_<name> = --mask ... --silk ... --finish ...
-# Colours are KiCad names or \#RRGGBBAA (AA = opacity, FF is fully opaque).
-RENDER_PRESET ?= board
-RENDER_PRESET_green-enig ?= --mask "\#0B5A26FF" --silk "White" --finish "ENIG"
-RENDER_PRESET_green-hasl ?= --mask "\#0B5A26FF" --silk "White" --finish "HAL lead-free"
-RENDER_PRESET_black-enig ?= --mask "\#141414F5" --silk "White" --finish "ENIG"
-RENDER_PRESET_blue-enig ?= --mask "\#1B4A9CE6" --silk "White" --finish "ENIG"
-RENDER_PRESET_ARGS = $(RENDER_PRESET_$(RENDER_PRESET))
-ifeq ($(RENDER_PRESET),board)
-RENDER_PCB = $(PCB)
-else
-ifeq ($(strip $(RENDER_PRESET_ARGS)),)
-$(error Unknown RENDER_PRESET "$(RENDER_PRESET)", define RENDER_PRESET_$(RENDER_PRESET))
-endif
-# The copy sits next to the board so ${KIPRJMOD} 3D model paths still resolve
-RENDER_PCB = $(_DIR)/.$(PROJECT)-render.kicad_pcb
-RENDER_PRO = $(_DIR)/.$(PROJECT)-render.kicad_pro
-.INTERMEDIATE: $(RENDER_PCB) $(RENDER_PRO)
-endif
-
 # BOMS & Assembly
 CENTROID_CSV=$(ASSEMBLY_DIR)/centroid.csv
 CENTROID_GERBER=$(ASSEMBLY_DIR)/centroid.gerber
@@ -177,10 +154,9 @@ NETLIST=$(_OUTDIR)/netlist_$(PCBBASE)_$(VERSION).csv
 STEP=$(MECH_DIR)/$(PCBBASE)_$(VERSION).step
 
 # 3D models for placing this board on another (e.g. a daughter board on its
-# motherboard), exported from the render preset copy so colours match the
-# renders. The VRML carries mask, silkscreen and finish colours for KiCad
-# renders; the STEP of the same name replaces it in the motherboard's STEP
-# export (--subst-models). Both share MODEL_ORIGIN ("XxYmm", board
+# motherboard). The VRML carries the board stackup's mask, silkscreen and
+# finish colours for KiCad renders; the STEP of the same name replaces it in
+# the motherboard's STEP export (--subst-models). Both share MODEL_ORIGIN ("XxYmm", board
 # coordinates), which defaults to this board's grid origin: put the grid
 # origin where the motherboard footprint's anchor is.
 MODEL_ORIGIN ?= $(shell sed -n 's/.*(grid_origin \([-0-9.]*\) \([-0-9.]*\)).*/\1x\2mm/p' "$(PCB)" 2>/dev/null | head -n 1)
@@ -273,7 +249,6 @@ clean:
 	-rm ${IPC2581}
 	-rm ${TESTPOINT_REPORT}
 	-rm ${RENDERS}
-	-rm -f $(_DIR)/.$(PROJECT)-render.kicad_pcb $(_DIR)/.$(PROJECT)-render.kicad_pro
 	-rm ${GERBER_PDF_DIR}/*.pdf
 	-rm ${GENCAD}
 	-rm ${ODB}
@@ -320,10 +295,10 @@ ifeq ($(strip $(MODEL_ORIGIN)),)
 	$(error No grid origin on $(PCB): set one where the motherboard footprint's anchor is, or pass MODEL_ORIGIN=XxYmm)
 endif
 
-$(STEP_MODEL): $(RENDER_PCB) $(RENDER_PRO) | check-model-origin $(MECH_DIR)
+$(STEP_MODEL): $(PCB) | check-model-origin $(MECH_DIR)
 	$(KICADCLI) pcb export step "$<" --user-origin "$(MODEL_ORIGIN)" $(STEP_MODEL_FLAGS) -f -o "$@"
 
-$(VRML_MODEL): $(RENDER_PCB) $(RENDER_PRO) | check-model-origin $(MECH_DIR)
+$(VRML_MODEL): $(PCB) | check-model-origin $(MECH_DIR)
 	$(KICADCLI) pcb export vrml "$<" --user-origin "$(MODEL_ORIGIN)" $(VRML_MODEL_FLAGS) -f -o "$@"
 
 # Screen size required for running headless
@@ -339,11 +314,11 @@ $(FABZIP): $(MANUFACTURING_DIR) $(CENTROID_CSV) gerbers $(IPC2581) boms
 
 $(OUTLINE): $(PCB) | $(MECH_DIR)
 	$(KICADCLI) pcb export svg -l "Edge.Cuts" --black-and-white --exclude-drawing-sheet "$<" -o "$@"
-${RENDER_DIR}/Render_%.png: ${RENDER_PCB} ${RENDER_PRO} | ${_OUTDIR} ${RENDER_DIR} render-check
+${RENDER_DIR}/Render_%.png: ${PCB} | ${_OUTDIR} ${RENDER_DIR} render-check
 	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) ${RENDER_OPTS} "$<" -o "$@"
 
 # Shorter stem than Render_%.png, so make prefers this rule for angled renders
-${RENDER_DIR}/Render_ANGLED_%.png: ${RENDER_PCB} ${RENDER_PRO} | ${_OUTDIR} ${RENDER_DIR} render-check
+${RENDER_DIR}/Render_ANGLED_%.png: ${PCB} | ${_OUTDIR} ${RENDER_DIR} render-check
 	${KICADCLI} pcb render --side $(shell echo $* | tr A-Z a-z) ${RENDER_OPTS} \
 		--perspective --rotate "${RENDER_ANGLE}" --zoom ${RENDER_ANGLED_ZOOM} "$<" -o "$@"
 
@@ -355,15 +330,6 @@ render-check:
 		echo "WARNING: 3D viewer material mode is $$mode, not Realistic (0), in $(VIEWER_3D_CONFIG)." >&2; \
 		echo "WARNING: Renders will have flat or grey parts. Set Material properties to Realistic in the KiCad 3D viewer preferences." >&2; \
 	fi
-
-# Board copy with the render preset applied to its stackup
-ifneq ($(RENDER_PCB),$(PCB))
-$(RENDER_PCB): $(PCB)
-	python3 $(ROOT_DIR)/scripts/render_preset.py "$<" "$@" $(RENDER_PRESET_ARGS)
-
-$(RENDER_PRO): $(PCB)
-	if [ -e "$(_DIR)/$(PROJECT).kicad_pro" ]; then cp "$(_DIR)/$(PROJECT).kicad_pro" "$@"; else echo '{}' > "$@"; fi
-endif
 
 ${IPC2581}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export ipc2581 "$<" -o "$@"
@@ -389,7 +355,7 @@ ${GERBERPDF}: ${PCB} | ${GERBER_PDF_DIR}
 			touch "$@"; \
 	  fi
 
-${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${RENDER_PCB} ${RENDER_PRO} | ${_OUTDIR} render-check
+${_OUTDIR}/${PCBBASE}_${VERSION}_Render_%.png: ${PCB} | ${_OUTDIR} render-check
 	${KICADCLI} pcb render \
 		--side $(shell echo $* | tr A-Z a-z) \
 		${RENDER_OPTS} "$<" -o "$@"

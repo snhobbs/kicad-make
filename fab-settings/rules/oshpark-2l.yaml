@@ -1,0 +1,25 @@
+# Lengths in mm.
+# Hole clearance and text height aren't published, these are KiCad-ish defaults.
+name: OSH Park 2 layer
+description: OSH Park 2-layer, 6/6 mil, 10 mil drill, 5 mil annular ring
+source: https://docs.oshpark.com/services/two-layer/
+constraints:  # Board Setup > Constraints
+  min_clearance: 0.1524
+  min_track_width: 0.1524
+  min_connection: 0.1524
+  min_via_diameter: 0.508
+  min_via_annular_width: 0.127
+  min_through_hole_diameter: 0.254
+  min_hole_to_hole: 0.127
+  min_hole_clearance: 0.2
+  min_copper_edge_clearance: 0.381
+  min_text_height: 0.8
+  min_text_thickness: 0.127
+default_netclass:  # Board Setup > Net Classes, Default
+  clearance: 0.2
+  track_width: 0.2
+  via_diameter: 0.6
+  via_drill: 0.3
+solder_mask:  # Board Setup > Solder Mask/Paste
+  expansion: 0
+  min_web: 0.1016

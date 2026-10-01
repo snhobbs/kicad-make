@@ -1,0 +1,12 @@
+# Boards written by this directory's Makefile for Board Setup > Import Settings:
+# name -> stackup, colors and rules from ../fab-settings/.
+jlcpcb-2l-fr4-0.8mm: {stackup: jlcpcb-2l-fr4-0.8mm, colors: green, rules: jlcpcb-2l}
+jlcpcb-2l-fr4-1.0mm: {stackup: jlcpcb-2l-fr4-1.0mm, colors: green, rules: jlcpcb-2l}
+jlcpcb-2l-fr4-1.6mm: {stackup: jlcpcb-2l-fr4-1.6mm, colors: green, rules: jlcpcb-2l}
+jlcpcb-4l-fr4-0.8mm: {stackup: jlcpcb-4l-fr4-0.8mm, colors: green, rules: jlcpcb-4l}
+jlcpcb-4l-fr4-1.0mm: {stackup: jlcpcb-4l-fr4-1.0mm, colors: green, rules: jlcpcb-4l}
+jlcpcb-4l-fr4-1.6mm: {stackup: jlcpcb-4l-fr4-1.6mm, colors: green, rules: jlcpcb-4l}
+jlcpcb-2l-flex: {stackup: jlcpcb-2l-flex, colors: yellow-coverlay, rules: jlcpcb-flex}
+jlcpcb-4l-flex: {stackup: jlcpcb-4l-flex, colors: yellow-coverlay, rules: jlcpcb-flex}
+oshpark-2l-fr4: {stackup: oshpark-2l-fr4, colors: purple, rules: oshpark-2l}
+oshpark-4l-fr4: {stackup: oshpark-4l-fr4, colors: purple, rules: oshpark-4l}

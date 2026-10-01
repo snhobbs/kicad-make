@@ -1,0 +1,27 @@
+# Lengths in mm.
+# Regular vias (0.3 mm hole, 0.55 mm pad); smaller ones cost extra. Hole to
+# hole and hole clearance aren't published, these are KiCad-ish defaults.
+# Solder mask settings are the coverlay opening and minimum coverlay bridge.
+name: JLCPCB flex
+description: JLCPCB 2/4 layer FPC, 1/3 oz copper 3/3 mil, regular vias
+source: https://jlcpcb.com/capabilities/flex-pcb-capabilities
+constraints:  # Board Setup > Constraints
+  min_clearance: 0.0762
+  min_track_width: 0.0762
+  min_connection: 0.0762
+  min_via_diameter: 0.55
+  min_via_annular_width: 0.125
+  min_through_hole_diameter: 0.3
+  min_hole_to_hole: 0.25
+  min_hole_clearance: 0.2
+  min_copper_edge_clearance: 0.3
+  min_text_height: 1.0
+  min_text_thickness: 0.15
+default_netclass:  # Board Setup > Net Classes, Default
+  clearance: 0.2
+  track_width: 0.2
+  via_diameter: 0.6
+  via_drill: 0.3
+solder_mask:  # Board Setup > Solder Mask/Paste
+  expansion: 0.1
+  min_web: 0.5

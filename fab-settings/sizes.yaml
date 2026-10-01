@@ -1,0 +1,12 @@
+# Predefined track widths (Board Setup > Pre-defined Sizes) written with every
+# stackup, in mm. Widths under the board's minimum track width are left out.
+track_widths:
+  - 0.1524  # 6 mil
+  - 0.2032  # 8 mil
+  - 0.254   # 10 mil
+  - 0.5
+  - 1.0
+  - 2.0
+# Top layer trace impedances in ohms, solved as surface microstrip over the
+# first dielectric unless the stackup gives impedance_widths
+impedances: [50, 100]

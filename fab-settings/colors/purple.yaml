@@ -1,0 +1,6 @@
+# Colours are KiCad names or "#RRGGBBAA" (AA = opacity, FF is fully opaque).
+name: Purple (OSH Park)
+description: OSH Park purple mask, white silkscreen, ENIG
+solder_mask: "#4B2A7BF0"
+silkscreen: White
+copper_finish: ENIG

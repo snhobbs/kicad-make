@@ -1,0 +1,36 @@
+# Thicknesses in mm. Dielectric colours (the board body in 3D) are KiCad names
+# or "#RRGGBBAA" (AA = opacity); mask and silkscreen colours are in colors/.
+# The coverlay is modelled as the solder mask, which is where KiCad renders it.
+# JLCPCB doesn't publish a layer-by-layer 4-layer FPC build; this is two
+# 2-layer PI cores joined by a bond ply, sized to their 0.2 mm finished option.
+name: JLCPCB 4-layer flex
+description: JLCPCB 4-layer FPC, 0.2 mm, two 25 um PI cores, 1/3 oz copper
+source: https://jlcpcb.com/capabilities/flex-pcb-capabilities
+solder_mask:
+  thickness: 0.0275  # PI 12.5 um + adhesive 15 um
+  material: Coverlay
+  epsilon_r: 3.3
+  loss_tangent: 0.002
+layers:
+  - copper: 0.015  # 12 um foil + plating
+  - core:
+      thickness: 0.025
+      material: Polyimide
+      epsilon_r: 3.3
+      loss_tangent: 0.002
+      color: "#C29600D4"
+  - copper: 0.012
+  - prepreg:
+      thickness: 0.041
+      material: Bond ply
+      epsilon_r: 3.5
+      loss_tangent: 0.02
+      color: "#C29600D4"
+  - copper: 0.012
+  - core:
+      thickness: 0.025
+      material: Polyimide
+      epsilon_r: 3.3
+      loss_tangent: 0.002
+      color: "#C29600D4"
+  - copper: 0.015

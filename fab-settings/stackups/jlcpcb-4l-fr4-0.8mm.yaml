@@ -1,0 +1,35 @@
+# JLCPCB doesn't publish this build layer by layer: the prepreg is from the
+# named construction, the core is the standard size closest to the nominal.
+# Thicknesses in mm. Dielectric colours (the board body in 3D) are KiCad names
+# or "#RRGGBBAA" (AA = opacity); mask and silkscreen colours are in colors/.
+name: JLCPCB 4-layer FR4 0.8 mm (JLC04081H-3313)
+description: JLCPCB 4-layer, 0.8 mm, 1 oz outer / 0.5 oz inner
+source: https://jlcpcb.com/impedance
+solder_mask:
+  thickness: 0.01
+  material: Liquid Ink
+  epsilon_r: 3.8
+  loss_tangent: 0
+layers:
+  - copper: 0.035
+  - prepreg:
+      thickness: 0.0994
+      material: Prepreg 3313
+      epsilon_r: 4.1
+      loss_tangent: 0.02
+      color: FR4 natural
+  - copper: 0.0152
+  - core:
+      thickness: 0.45
+      material: FR4
+      epsilon_r: 4.6
+      loss_tangent: 0.02
+      color: FR4 natural
+  - copper: 0.0152
+  - prepreg:
+      thickness: 0.0994
+      material: Prepreg 3313
+      epsilon_r: 4.1
+      loss_tangent: 0.02
+      color: FR4 natural
+  - copper: 0.035

@@ -38,7 +38,7 @@ RUN /opt/venv/bin/pip install --upgrade pip \
 	&& /opt/venv/bin/pip install git+https://github.com/snhobbs/kicad-xyrs.git@master \
 	&& /opt/venv/bin/pip install git+https://github.com/snhobbs/kicad-testpoints.git@master \
 	&& /opt/venv/bin/pip install git+https://github.com/snhobbs/InteractiveHtmlBom.git@master \
-	&& /opt/venv/bin/pip install sexpdata
+	&& /opt/venv/bin/pip install sexpdata pyyaml
 
 
 RUN groupmod --gid ${GID} kicad \

@@ -1,0 +1,6 @@
+# Colours are KiCad names or "#RRGGBBAA" (AA = opacity, FF is fully opaque).
+name: Black coverlay
+description: Flex black coverlay, white silkscreen, ENIG
+solder_mask: "#1A1A1AF0"
+silkscreen: White
+copper_finish: ENIG

@@ -1,0 +1,20 @@
+# Thicknesses in mm. Dielectric colours (the board body in 3D) are KiCad names
+# or "#RRGGBBAA" (AA = opacity); mask and silkscreen colours are in colors/.
+name: JLCPCB 2-layer FR4 0.8 mm
+description: JLCPCB 2-layer, 0.8 mm FR4, 1 oz copper
+source: https://jlcpcb.com/capabilities/pcb-capabilities
+solder_mask:
+  thickness: 0.01
+  material: Liquid Ink
+  epsilon_r: 3.8
+  loss_tangent: 0
+# Top to bottom, alternating copper and dielectric (core or prepreg)
+layers:
+  - copper: 0.035
+  - core:
+      thickness: 0.71
+      material: FR4
+      epsilon_r: 4.5
+      loss_tangent: 0.02
+      color: FR4 natural
+  - copper: 0.035

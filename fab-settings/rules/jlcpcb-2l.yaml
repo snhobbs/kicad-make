@@ -1,0 +1,27 @@
+# Lengths in mm.
+# Vias are the no-surcharge limits: 0.3 mm hole at any pad size, or 0.2 mm
+# with a pad of at least 0.45 mm. Edge clearance is for routed edges, use 0.4
+# for V-scored panels.
+name: JLCPCB 1-2 layer rigid
+description: JLCPCB 1-2 layer FR4, 4/4 mil
+source: https://jlcpcb.com/capabilities/pcb-capabilities
+constraints:  # Board Setup > Constraints
+  min_clearance: 0.1
+  min_track_width: 0.1
+  min_connection: 0.1
+  min_via_diameter: 0.45
+  min_via_annular_width: 0.05
+  min_through_hole_diameter: 0.2
+  min_hole_to_hole: 0.2
+  min_hole_clearance: 0.2
+  min_copper_edge_clearance: 0.2
+  min_text_height: 1.0
+  min_text_thickness: 0.15
+default_netclass:  # Board Setup > Net Classes, Default
+  clearance: 0.2
+  track_width: 0.2
+  via_diameter: 0.6
+  via_drill: 0.3
+solder_mask:  # Board Setup > Solder Mask/Paste
+  expansion: 0
+  min_web: 0.1

@@ -1,0 +1,33 @@
+# Thicknesses in mm. Dielectric colours (the board body in 3D) are KiCad names
+# or "#RRGGBBAA" (AA = opacity); mask and silkscreen colours are in colors/.
+name: OSH Park 4-layer
+description: OSH Park 4-layer, 1.6 mm FR408HR, 1 oz outer / 0.5 oz inner
+source: https://docs.oshpark.com/services/four-layer/
+solder_mask:
+  thickness: 0.0152
+  material: Liquid Ink
+  epsilon_r: 3.8
+  loss_tangent: 0
+layers:
+  - copper: 0.0432  # 1 oz clad + plated
+  - prepreg:
+      thickness: 0.1999
+      material: FR408HR 2113
+      epsilon_r: 3.61  # at 1 GHz
+      loss_tangent: 0.0092
+      color: FR4 natural
+  - copper: 0.0175
+  - core:
+      thickness: 0.9906
+      material: FR408HR
+      epsilon_r: 3.61
+      loss_tangent: 0.0092
+      color: FR4 natural
+  - copper: 0.0175
+  - prepreg:
+      thickness: 0.1999
+      material: FR408HR 2113
+      epsilon_r: 3.61
+      loss_tangent: 0.0092
+      color: FR4 natural
+  - copper: 0.0432

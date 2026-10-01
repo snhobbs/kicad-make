@@ -1,0 +1,19 @@
+# Thicknesses in mm. Dielectric colours (the board body in 3D) are KiCad names
+# or "#RRGGBBAA" (AA = opacity); mask and silkscreen colours are in colors/.
+name: OSH Park 2-layer
+description: OSH Park 2-layer, 1.6 mm 175Tg FR4 (KB6167F), 1 oz copper
+source: https://docs.oshpark.com/services/two-layer/
+solder_mask:
+  thickness: 0.0152
+  material: Liquid Ink
+  epsilon_r: 3.8
+  loss_tangent: 0
+layers:
+  - copper: 0.0356
+  - core:
+      thickness: 1.524
+      material: FR4 KB6167F
+      epsilon_r: 4.5  # at 10 MHz
+      loss_tangent: 0.02  # not published
+      color: FR4 natural
+  - copper: 0.0356
