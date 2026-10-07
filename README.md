@@ -129,6 +129,16 @@ Try to not do this too often... Exports everything, skipping ERC and DRC check.
 make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> no-drc
 ```
 
+### Boards without a schematic
+
+Generated boards and panels have no `.kicad_sch`. `pcb-release` skips ERC, the schematic PDF, BOMs and the schematic parity check, and refills zones before DRC:
+
+```bash
+make -f kicad-make/Makefile PROJECT=<name of KiCad project> VERSION=<version number> pcb-release
+```
+
+It runs `pcb-drc`, `pcb-manufacturing` (gerbers, drill, outline, IPC2581, ODB++, GenCAD), `pcb-fabzip` (`<project>_<version>_pcb_manufacturing.zip`) and `pcb-documents` (gerber PDF, STEP, renders). Each can also be run on its own.
+
 ### Export schematic
 
 ```bash
@@ -184,6 +194,7 @@ This uses the makefile in the Docker image.
 | `documents`     | Generates schematic, BOM, step, IBOM, & gerberpdf                                             |
 | `manufacturing` | Generates manufacturing files (Gerbers, IPC2581, etc.).                                       |
 | `no-drc`        | Skips DRC & ERC, completes the rest of the release process                                    |
+| `pcb-release`   | Release for a board with no schematic: DRC (no parity, zones refilled), manufacturing, zip, documents. |
 | `schematic`     | Generates schematic PDF.                                                                      |
 | `boms`          | Generates BOM files (normal and LCSC).                                                        |
 | `gerbers`       | Generates Gerber files.                                                                       |
@@ -255,6 +266,15 @@ make -C kicad-setting-boards
 ### Notes on the data
 
 - Flex coverlay is modelled as the solder mask, which is where KiCad renders it.
+- Aluminum core (`jlcpcb-1l-aluminum-*`, rules `jlcpcb-aluminum`, colours
+  `white-hasl` or `black-hasl`) is one copper layer on an insulation layer on
+  the aluminium base. KiCad has no 1-layer board, so the stackup is
+  `single_sided`: B.Cu stays in the board with no thickness, and nothing goes
+  on it, and the board has no bottom mask, paste or silkscreen layers (the
+  bottom is the bare metal). Applying it refuses a board with items on those. The base is a `sublayers` entry of the dielectric, so the 50 ohm
+  width is solved over the insulation alone. JLCPCB doesn't publish the
+  insulation's thickness or dielectric constant; the 0.1 mm and 4.5 are
+  typical values and say so. There are no plated holes, so no vias.
 - JLCPCB doesn't publish layer-by-layer builds for 4-layer flex or the 0.8 and
   1.0 mm 4-layer FR4; those stackups are derived and say so.
 - Rules use the fab's no-surcharge limits; values a fab doesn't publish are

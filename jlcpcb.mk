@@ -23,7 +23,7 @@ $(JLCPCB_ZIP): $(JLCPCB_DIR) $(LCSCBOM) $(JLCPCB_CENTROID) jlcpcb_gerbers
 	zip -rj "$@" "$<"
 
 jlcpcb_gerbers: $(PCB) $(DRILL) | $(JLCPCB_DIR) $(JLCPCB_GERBERS_DIR)
-	$(KICADCLI) pcb export gerbers --use-drill-file-origin "$<" -o $(JLCPCB_GERBERS_DIR)
+	$(KICADCLI) pcb export gerbers --check-zones --use-drill-file-origin "$<" -o $(JLCPCB_GERBERS_DIR)
 	cp $(DRILL) $(JLCPCB_GERBERS_DIR)
 
 jlcpcb_release: $(JLCPCB_ZIP) | $(JLCPCB_DIR)

@@ -18,7 +18,7 @@ macrofab_release: $(MACROFAB_ZIP) | $(MACROFAB_DIR)
 	@echo "$(MACROFAB_GERBERS_DIR)"
 
 macrofab_gerbers: $(PCB) $(DRILL) | $(MACROFAB_DIR) $(MACROFAB_GERBERS_DIR)
-	$(KICADCLI) pcb export gerbers --use-drill-file-origin "$<" -o $(MACROFAB_GERBERS_DIR)
+	$(KICADCLI) pcb export gerbers --check-zones --use-drill-file-origin "$<" -o $(MACROFAB_GERBERS_DIR)
 	cp $(DRILL) $(MACROFAB_GERBERS_DIR)
 	rm -f $(wildcard $(MACROFAB_GERBERS_DIR)/*.gbrjob)
 	rm -f $(wildcard $(MACROFAB_GERBERS_DIR)/*.gbr)

@@ -219,6 +219,12 @@ DRC_FLAGS += --exit-code-violations --schematic-parity
 ERC_FLAGS += --exit-code-violations
 endif
 
+# Boards without a schematic (generated boards, panels): DRC without the
+# parity check and without waiting on ERC
+PCB_DRC=$(LOGS_DIR)/drc-pcb.rpt
+PCB_DRC_FLAGS=$(filter-out --schematic-parity,$(DRC_FLAGS)) --refill-zones
+PCB_FABZIP=$(_OUTDIR)/$(PCBBASE)_$(VERSION)_pcb_manufacturing.zip
+
 .PHONY: all clean
 all: release
 
@@ -242,7 +248,7 @@ clean:
 	-rm ${CENTROID_CSV}
 	-rm ${IBOM}
 	-rm ${GERBER_DIR}/*.gbr
-	-rm ${FABZIP}
+	-rm ${FABZIP} ${PCB_FABZIP}
 	-rm ${OUTLINE}
 	-rm ${LOGS_DIR}/*.log
 	-rm ${LOGS_DIR}/*.rpt
@@ -264,6 +270,10 @@ $(TESTPOINT_REPORT): $(PCB) | $(_OUTDIR)
 $(DRC): $(PCB) $(ERC) | $(LOGS_DIR)
 	$(KICADCLI) pcb drc $(DRC_FLAGS) "$<" -o $(LOGS_DIR)/drc-out.log || { cat "$(LOGS_DIR)/drc-out.log"; exit 1; }
 	mv $(LOGS_DIR)/drc-out.log "$@"
+
+$(PCB_DRC): $(PCB) | $(LOGS_DIR)
+	$(KICADCLI) pcb drc $(PCB_DRC_FLAGS) "$<" -o $(LOGS_DIR)/drc-pcb-out.log || { cat "$(LOGS_DIR)/drc-pcb-out.log"; exit 1; }
+	mv $(LOGS_DIR)/drc-pcb-out.log "$@"
 
 $(ERC): $(SCH) | $(LOGS_DIR)
 	$(KICADCLI) sch erc $(ERC_FLAGS) "$<" -o $(LOGS_DIR)/erc-out.log || { cat  "$(LOGS_DIR)/erc-out.log"; exit 1; }
@@ -310,6 +320,9 @@ $(IBOM): $(PCB) | $(ASSEMBLY_DIR)
 		--name-format "$(basename $@ )"
 
 $(FABZIP): $(MANUFACTURING_DIR) $(CENTROID_CSV) gerbers $(IPC2581) boms
+	zip -rj "$@" "$<"
+
+$(PCB_FABZIP): $(MANUFACTURING_DIR) gerbers $(DRILL) $(IPC2581)
 	zip -rj "$@" "$<"
 
 $(OUTLINE): $(PCB) | $(MECH_DIR)
@@ -367,7 +380,7 @@ ${ODB}: ${PCB} | ${_OUTDIR}
 	${KICADCLI} pcb export odb "$<" -o "$@"
 
 gerbers: ${PCB} | ${GERBER_DIR}
-	${KICADCLI} pcb export gerbers --use-drill-file-origin "$<" -o ${GERBER_DIR}
+	${KICADCLI} pcb export gerbers --check-zones --use-drill-file-origin "$<" -o ${GERBER_DIR}
 
 #===============================================================
 # Compund Targets
@@ -389,6 +402,24 @@ centroid: $(CENTROID_CSV)
 boms: $(ASSEMBLY_DIR) $(BOM) $(UNCLUSTERED_BOM)
 
 board: gerbers $(DRILL) $(CENTROID_CSV) boms $(OUTLINE)
+
+#===============================================================
+# Board-only Targets (no schematic: skips ERC, BOMs, schematic
+# PDF, parity check)
+#===============================================================
+
+.PHONY: pcb-release pcb-documents pcb-manufacturing pcb-drc pcb-fabzip
+
+pcb-release: pcb-drc pcb-manufacturing pcb-fabzip pcb-documents
+
+pcb-documents: gerberpdf step renders
+
+pcb-manufacturing: gerbers $(DRILL) $(OUTLINE) ipc2581 odb gencad
+	echo "\n\n Manufacturing Files Exported \n\n"
+
+pcb-drc: $(PCB_DRC)
+
+pcb-fabzip: $(PCB_FABZIP)
 
 #===============================================================
 # Aliased Targets
