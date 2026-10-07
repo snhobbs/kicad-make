@@ -10,3 +10,5 @@ jlcpcb-2l-flex: {stackup: jlcpcb-2l-flex, colors: yellow-coverlay, rules: jlcpcb
 jlcpcb-4l-flex: {stackup: jlcpcb-4l-flex, colors: yellow-coverlay, rules: jlcpcb-flex}
 oshpark-2l-fr4: {stackup: oshpark-2l-fr4, colors: purple, rules: oshpark-2l}
 oshpark-4l-fr4: {stackup: oshpark-4l-fr4, colors: purple, rules: oshpark-4l}
+jlcpcb-1l-aluminum-1.0mm: {stackup: jlcpcb-1l-aluminum-1.0mm, colors: white-hasl, rules: jlcpcb-aluminum}
+jlcpcb-1l-aluminum-1.6mm: {stackup: jlcpcb-1l-aluminum-1.6mm, colors: white-hasl, rules: jlcpcb-aluminum}

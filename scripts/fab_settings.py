@@ -33,6 +33,12 @@ from microstrip import width_for_impedance
 SETTINGS_DIR = Path(__file__).resolve().parent.parent / "fab-settings"
 KINDS = ("stackups", "colors", "rules")
 DIELECTRIC_TYPES = ("core", "prepreg")
+# The bottom's mask, paste and silkscreen, which a single-sided (metal core)
+# board doesn't have, with their layer table ids (KiCad 9+, earlier) and the
+# front layer each is listed after
+BOTTOM_SIDE_LAYERS = {"B.Paste": (15, 34, "F.Paste"), "B.SilkS": (7, 36, "F.SilkS"),
+                      "B.Mask": (3, 38, "F.Mask")}
+BOTTOM_SIDE_USER_NAMES = {"B.SilkS": "B.Silkscreen"}
 # Board fab settings in the stackup that aren't part of a fab's stackup
 KEPT_STACKUP_SETTINGS = ("dielectric_constraints", "edge_connector", "castellated_pads",
                          "edge_plating")
@@ -64,13 +70,29 @@ class Copper:
 
 
 @dataclass(frozen=True)
-class Dielectric:
-    type: str
+class Sublayer:
+    """A further material in a dielectric layer, under its first one: the
+    metal base of a metal core board, under the insulation."""
     thickness: float
     material: str
     epsilon_r: float
     loss_tangent: float
     color: str | None = None
+
+
+@dataclass(frozen=True)
+class Dielectric:
+    type: str
+    thickness: float  # of its first material, the one against the copper above
+    material: str
+    epsilon_r: float
+    loss_tangent: float
+    color: str | None = None
+    sublayers: tuple[Sublayer, ...] = ()
+
+    @property
+    def total_thickness(self) -> float:
+        return self.thickness + sum(sub.thickness for sub in self.sublayers)
 
 
 @dataclass(frozen=True)
@@ -82,6 +104,10 @@ class Stackup:
     # Top layer trace widths from the fab's impedance calculator, by ohms,
     # used instead of the computed microstrip width
     impedance_widths: dict[int, float]
+    # Copper, mask and silkscreen on the top only (metal core): B.Cu is in the
+    # board, as KiCad needs it, but has no thickness and nothing goes on it,
+    # and the board has no bottom mask, paste or silkscreen layers
+    single_sided: bool = False
 
     @property
     def copper_count(self) -> int:
@@ -89,7 +115,10 @@ class Stackup:
 
     @property
     def thickness(self) -> float:
-        return 2 * self.solder_mask.thickness + sum(layer.thickness for layer in self.layers)
+        masks = 1 if self.single_sided else 2
+        return masks * self.solder_mask.thickness + sum(
+            layer.total_thickness if isinstance(layer, Dielectric) else layer.thickness
+            for layer in self.layers)
 
     def top_trace_width(self, ohms: int) -> float:
         if ohms in self.impedance_widths:
@@ -106,13 +135,15 @@ def parse_layer(index: int, item: dict) -> Copper | Dielectric:
     if kind == "copper":
         return Copper(thickness=float(value))
     if kind in DIELECTRIC_TYPES:
-        return Dielectric(type=kind, **value)
+        value = dict(value)
+        sublayers = tuple(Sublayer(**sub) for sub in value.pop("sublayers", ()))
+        return Dielectric(type=kind, sublayers=sublayers, **value)
     raise SettingsError(f"layers[{index}]: unknown layer kind {kind!r}")
 
 
 def parse_stackup(data: dict) -> Stackup:
     check_keys(data, {"name", "description", "source", "solder_mask", "impedance_widths",
-                      "layers"})
+                      "single_sided", "layers"})
     layers = tuple(parse_layer(i, item) for i, item in enumerate(data["layers"]))
     if len(layers) < 3 or any(isinstance(layer, Copper) != (i % 2 == 0)
                               for i, layer in enumerate(layers)) or len(layers) % 2 == 0:
@@ -123,9 +154,12 @@ def parse_stackup(data: dict) -> Stackup:
         solder_mask=SolderMask(**data["solder_mask"]),
         layers=layers,
         impedance_widths={int(k): float(v) for k, v in data.get("impedance_widths", {}).items()},
+        single_sided=bool(data.get("single_sided", False)),
     )
     if stackup.copper_count % 2:
         raise SettingsError("KiCad boards need an even number of copper layers")
+    if stackup.single_sided and (stackup.copper_count != 2 or layers[-1].thickness):
+        raise SettingsError("a single_sided stackup is copper, dielectric and a bottom copper of 0")
     return stackup
 
 
@@ -282,6 +316,30 @@ def set_copper_layers(board: list, count: int) -> None:
         for i, name in enumerate(wanted[1:-1], start=1) if name not in current]
 
 
+def set_bottom_side_layers(board: list, present: bool) -> None:
+    """Take the bottom's mask, paste and silkscreen out of the layer table
+    (a single-sided board: bare metal under it), or put them back."""
+    board_layers = child(board, "layers")
+    current = {str(item[1]): item for item in board_layers[1:] if isinstance(item, list)}
+    if not present:
+        in_use = used_layers(board, [name for name in BOTTOM_SIDE_LAYERS if name in current])
+        if in_use:
+            raise SettingsError("a single-sided board has no bottom mask, paste or silkscreen, "
+                                f"these still have items: {', '.join(in_use)}")
+        board_layers[1:] = [item for item in board_layers[1:]
+                            if not (isinstance(item, list) and str(item[1]) in BOTTOM_SIDE_LAYERS)]
+        return
+    old_ids = int(str(current["B.Cu"][0])) == 31
+    for name, (new_id, old_id, front) in BOTTOM_SIDE_LAYERS.items():
+        if name in current:
+            continue
+        entry = [Symbol(str(old_id if old_ids else new_id)), name, Symbol("user")]
+        if name in BOTTOM_SIDE_USER_NAMES:
+            entry.append(BOTTOM_SIDE_USER_NAMES[name])
+        after = board_layers.index(current[front]) if front in current else len(board_layers) - 1
+        board_layers.insert(after + 1, entry)
+
+
 def stackup_layer(stackup_node: list, name: str) -> list | None:
     return next((item for item in stackup_node[1:]
                  if is_node(item, "layer") and str(item[1]) == name), None)
@@ -335,18 +393,21 @@ def build_stackup_node(stackup: Stackup, colors: Colors, keep: list) -> list:
                           [Symbol("thickness"), num(layer.thickness)]])
             continue
         dielectric_index += 1
-        nodes.append(colored(
-            [Symbol("layer"), f"dielectric {dielectric_index}", [Symbol("type"), layer.type]],
-            layer.color) + [
-            [Symbol("thickness"), num(layer.thickness)], [Symbol("material"), layer.material],
-            [Symbol("epsilon_r"), num(layer.epsilon_r)],
-            [Symbol("loss_tangent"), num(layer.loss_tangent)]])
-    nodes += [
-        mask_layer("B.Mask", "Bottom Solder Mask"),
-        [Symbol("layer"), "B.Paste", [Symbol("type"), "Bottom Solder Paste"]],
-        colored([Symbol("layer"), "B.SilkS", [Symbol("type"), "Bottom Silk Screen"]],
-                colors.silkscreen),
-    ]
+        node = [Symbol("layer"), f"dielectric {dielectric_index}", [Symbol("type"), layer.type]]
+        for i, part in enumerate((layer, *layer.sublayers)):
+            # KiCad writes a dielectric's further materials after an addsublayer token
+            node = colored(node + ([Symbol("addsublayer")] if i else []), part.color) + [
+                [Symbol("thickness"), num(part.thickness)], [Symbol("material"), part.material],
+                [Symbol("epsilon_r"), num(part.epsilon_r)],
+                [Symbol("loss_tangent"), num(part.loss_tangent)]]
+        nodes.append(node)
+    if not stackup.single_sided:  # nothing on a single-sided board's bottom
+        nodes += [
+            mask_layer("B.Mask", "Bottom Solder Mask"),
+            [Symbol("layer"), "B.Paste", [Symbol("type"), "Bottom Solder Paste"]],
+            colored([Symbol("layer"), "B.SilkS", [Symbol("type"), "Bottom Silk Screen"]],
+                    colors.silkscreen),
+        ]
     if colors.copper_finish:
         nodes.append([Symbol("copper_finish"), colors.copper_finish])
     return [Symbol("stackup"), *nodes, *keep]
@@ -382,6 +443,7 @@ def apply_to_board(text: str, stackup: Stackup | None, colors: Colors | None,
     edited = ["setup"]
     if stackup:
         set_copper_layers(board, stackup.copper_count)
+        set_bottom_side_layers(board, present=not stackup.single_sided)
         set_board_thickness(board, stackup.thickness)
         edited += ["layers", "general"]
         keep = [item for item in (old or [])[1:]

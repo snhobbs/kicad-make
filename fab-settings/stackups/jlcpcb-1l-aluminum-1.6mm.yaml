@@ -1,0 +1,37 @@
+# Thicknesses in mm. Dielectric colours (the board body in 3D) are KiCad names
+# or "#RRGGBBAA" (AA = opacity); mask and silkscreen colours are in colors/.
+# Metal core: one copper layer on a thermally conductive insulation layer on
+# an aluminium base. KiCad has no 1-layer board, so B.Cu is there with no
+# thickness: put nothing on it. The bottom is the bare metal, so single_sided
+# also takes the bottom mask, paste and silkscreen layers out of the board.
+# The base is a sublayer of the one dielectric,
+# so the trace impedances are solved over the insulation alone, with the
+# aluminium as the plane under it.
+# JLCPCB publishes the finished thickness, 1 oz copper, 1 W/mK and 3 kV
+# breakdown, but not the insulation's thickness or dielectric constant: the
+# 0.1 mm and 4.5 here are typical of a 1 W/mK filled epoxy, not their figures.
+name: JLCPCB 1-layer aluminum 1.6 mm
+description: JLCPCB aluminum core, 1.6 mm, 1 oz copper, 1 W/mK insulation
+source: https://jlcpcb.com/pcb-fabrication/metal-core-pcb
+single_sided: true
+solder_mask:
+  thickness: 0.01
+  material: Liquid Ink
+  epsilon_r: 3.8
+  loss_tangent: 0
+# Top to bottom, alternating copper and dielectric (core or prepreg)
+layers:
+  - copper: 0.035
+  - core:
+      thickness: 0.1  # not published, typical
+      material: Thermal insulation 1 W/mK
+      epsilon_r: 4.5  # not published, typical
+      loss_tangent: 0.02
+      color: "#B8B8B8FF"
+      sublayers:
+        - thickness: 1.455
+          material: Aluminum
+          epsilon_r: 1
+          loss_tangent: 0
+          color: "#B8B8B8FF"
+  - copper: 0  # no bottom copper

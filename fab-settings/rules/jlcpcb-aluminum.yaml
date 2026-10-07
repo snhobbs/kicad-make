@@ -1,0 +1,29 @@
+# Lengths in mm.
+# One copper layer and no plated holes, so no vias: the via sizes are those of
+# the smallest hole (0.65 mm), there to flag one placed by mistake, not for use.
+# Hole to hole, hole clearance, edge clearance, text and mask settings aren't
+# published for aluminum, these are the 1-2 layer FR4 ones or KiCad-ish
+# defaults, with the edge clearance opened up for the routed metal edge.
+name: JLCPCB aluminum
+description: JLCPCB 1-layer aluminum core, 1 oz copper 4/4 mil, 0.65 mm holes, HASL
+source: https://jlcpcb.com/pcb-fabrication/metal-core-pcb
+constraints:  # Board Setup > Constraints
+  min_clearance: 0.1
+  min_track_width: 0.1
+  min_connection: 0.1
+  min_via_diameter: 1.0
+  min_via_annular_width: 0.15
+  min_through_hole_diameter: 0.65
+  min_hole_to_hole: 0.5
+  min_hole_clearance: 0.3
+  min_copper_edge_clearance: 0.3
+  min_text_height: 1.0
+  min_text_thickness: 0.15
+default_netclass:  # Board Setup > Net Classes, Default
+  clearance: 0.2
+  track_width: 0.25
+  via_diameter: 1.0
+  via_drill: 0.65
+solder_mask:  # Board Setup > Solder Mask/Paste
+  expansion: 0
+  min_web: 0.1

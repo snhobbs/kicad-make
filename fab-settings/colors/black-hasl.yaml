@@ -1,0 +1,6 @@
+# Colours are KiCad names or "#RRGGBBAA" (AA = opacity, FF is fully opaque).
+name: Black HASL
+description: Black mask, white silkscreen, lead-free HASL (aluminum core)
+solder_mask: "#141414F5"
+silkscreen: White
+copper_finish: HAL lead-free
