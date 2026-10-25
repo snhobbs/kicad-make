@@ -277,6 +277,13 @@ make -C kicad-setting-boards
   typical values and say so. There are no plated holes, so no vias.
 - JLCPCB doesn't publish layer-by-layer builds for 4-layer flex or the 0.8 and
   1.0 mm 4-layer FR4; those stackups are derived and say so.
+- HDI (`jlcpcb-6l-hdi-fr4-1.6mm`, rules `jlcpcb-hdi`, vias `fr4-blind`) is a 1+4+1
+  build with laser microvias (0.1 mm default drill, 0.075 mm ring) from JLCPCB's
+  [HDI FAQ](https://jlcpcb.com/help/article/hdi-pcb-capabilities-faq). The FAQ
+  doesn't give the prepreg thicknesses as text, so the stackup is still the
+  JLC06161H-1080 standard build; confirm it with JLCPCB when ordering.
+  The vias profile bans buried, skip (multi-layer blind) and inner-to-inner micro
+  vias with DRC rules, leaving micro vias on L1-L2 and L(n-1)-Ln only.
 - Rules use the fab's no-surcharge limits; values a fab doesn't publish are
   KiCad defaults and are commented.
 - Needs `sexpdata` and `pyyaml`; the templates also need KiCad's `pcbnew`

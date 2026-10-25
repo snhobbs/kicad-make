@@ -1,0 +1,17 @@
+# Lengths in mm. One via set for every rigid FR4 board, any fab and layer count.
+# Sizes follow IPC-2221B/IPC-6012: 0.15 mm annular ring on the default and power
+# vias (the 0.05 mm Class 3 external minimum plus drill and registration
+# tolerance), and a drill-to-board aspect ratio under 8:1 on 1.6 mm (5.3:1 for
+# 0.3 mm). The small via is OSH Park's 10 mil drill with a 0.127 mm ring, the
+# smallest every fab here makes without a surcharge. Blind, buried and micro
+# vias are off.
+name: FR4 through vias
+description: Through-hole vias only, IPC-2221B sizes, same on every rigid FR4 board
+source: https://www.ipc.org/TOC/IPC-2221B.pdf
+sizes:  # Board Setup > Pre-defined Sizes, the first is the default
+  - {diameter: 0.6, drill: 0.3}
+  - {diameter: 0.508, drill: 0.254}
+  - {diameter: 0.8, drill: 0.4}
+blind: false
+buried: false
+microvia: null

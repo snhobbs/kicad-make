@@ -157,7 +157,9 @@
         "min_via_annular_width": 0.1016,
         "min_via_diameter": 0.4572,
         "solder_mask_to_copper_clearance": 0.0,
-        "use_height_for_length_calcs": true
+        "use_height_for_length_calcs": true,
+        "allow_blind_buried_vias": false,
+        "allow_microvias": false
       },
       "teardrop_options": [
         {
@@ -239,7 +241,24 @@
           "spacing": 0.6
         }
       },
-      "via_dimensions": [],
+      "via_dimensions": [
+        {
+          "diameter": 0.0,
+          "drill": 0.0
+        },
+        {
+          "diameter": 0.6,
+          "drill": 0.3
+        },
+        {
+          "diameter": 0.508,
+          "drill": 0.254
+        },
+        {
+          "diameter": 0.8,
+          "drill": 0.4
+        }
+      ],
       "zones_allow_external_fillets": false
     },
     "ipc2581": {

@@ -1,4 +1,4 @@
-FROM kicad/kicad:10.0.5
+FROM kicad/kicad:10.0.6-amd64
 
 ENV DEBIAN_FRONTEND=noninteractive
 

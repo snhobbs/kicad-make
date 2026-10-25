@@ -1,0 +1,21 @@
+# Lengths in mm. Same through vias as fr4-through, plus blind and micro vias for
+# HDI builds (1+N+1: laser microvias L1-L2 and L(n-1)-Ln). Buried vias are banned
+# by a custom DRC rule, since KiCad's setting allows blind and buried together.
+# Microvia: IPC-2226 laser via with a 0.075 mm ring (land = drill + 0.15) and an
+# aspect ratio (dielectric depth : drill) under 1:1, 0.76:1 on a 0.0764 mm 1080
+# prepreg. JLCPCB makes 0.075-0.15 mm laser holes.
+name: FR4 through and blind vias
+description: Through, blind and micro vias, no buried vias, IPC-2221B/2226 sizes
+# Ground vias are through-hole only: DRC rules disallow blind and micro vias on
+# through_nets, and via_defaults.py converts existing ones.
+source: https://www.ipc.org/TOC/IPC-2226.pdf
+sizes:  # Board Setup > Pre-defined Sizes, the first is the default
+  - {diameter: 0.6, drill: 0.3}
+  - {diameter: 0.508, drill: 0.254}
+  - {diameter: 0.8, drill: 0.4}
+blind: true
+buried: false
+inner_microvias: false  # DRC rules: microvias only L1-L2 and L(n-1)-Ln
+skip_vias: false  # DRC rule: only adjacent-layer microvias, no L1-L3 style blind vias
+microvia: {diameter: 0.25, drill: 0.1}
+through_nets: [GND]

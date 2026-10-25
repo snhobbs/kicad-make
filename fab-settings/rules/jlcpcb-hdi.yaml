@@ -1,0 +1,29 @@
+# Lengths in mm.
+# Via sizes are in vias/ (fr4-blind). Edge clearance is for routed edges, use
+# 0.4 for V-scored panels. 3.5/3.5 mil is JLCPCB's recommended HDI width and
+# space; 3/3 mil is the minimum and 2.7/2.7 mil costs more.
+# Via limits are set by the laser microvia (0.075-0.15 mm hole, 0.075 mm ring),
+# so min_through_hole_diameter is the 0.1 mm default microvia drill; mechanical
+# through holes are 0.15 mm at best. Hole to hole isn't published; the 0.24 mm
+# hole-edge spacing between different nets is used for it and hole clearance.
+name: JLCPCB HDI
+description: JLCPCB HDI multilayer FR4, 3.5/3.5 mil, laser microvias
+source: https://jlcpcb.com/help/article/hdi-pcb-capabilities-faq
+constraints:  # Board Setup > Constraints
+  min_clearance: 0.09
+  min_track_width: 0.09
+  min_connection: 0.09
+  min_via_diameter: 0.25
+  min_via_annular_width: 0.075
+  min_through_hole_diameter: 0.1
+  min_hole_to_hole: 0.24
+  min_hole_clearance: 0.24
+  min_copper_edge_clearance: 0.2
+  min_text_height: 1.0
+  min_text_thickness: 0.15
+default_netclass:  # Board Setup > Net Classes, Default
+  clearance: 0.2
+  track_width: 0.2
+solder_mask:  # Board Setup > Solder Mask/Paste
+  expansion: 0
+  min_web: 0.1

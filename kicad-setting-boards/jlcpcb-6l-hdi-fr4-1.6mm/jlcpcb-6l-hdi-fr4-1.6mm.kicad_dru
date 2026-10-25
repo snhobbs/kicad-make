@@ -1,0 +1,23 @@
+(version 1)
+
+# fab_settings vias: begin (generated, edit the vias profile instead)
+(rule "No buried vias"
+	(constraint disallow buried_via))
+(rule "No skip vias"
+	(constraint disallow blind_via))
+(rule "No inner micro vias (In2.Cu)"
+	(constraint disallow micro_via)
+	(layer "In2.Cu"))
+(rule "No inner micro vias (In3.Cu)"
+	(constraint disallow micro_via)
+	(layer "In3.Cu"))
+(rule "GND through vias only (micro_via)"
+	(constraint disallow micro_via)
+	(condition "A.NetName == 'GND'"))
+(rule "GND through vias only (blind_via)"
+	(constraint disallow blind_via)
+	(condition "A.NetName == 'GND'"))
+(rule "GND through vias only (buried_via)"
+	(constraint disallow buried_via)
+	(condition "A.NetName == 'GND'"))
+# fab_settings vias: end

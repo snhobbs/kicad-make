@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """Apply fab settings (stackup, colours, design rules) to a KiCad board.
 
-Settings live in fab-settings/ as three independent sets of YAML files:
+Settings live in fab-settings/ as four independent sets of YAML files:
   stackups/  physical build: copper, dielectrics, mask thickness, board colour
   colors/    solder mask and silkscreen colours, copper finish
   rules/     fab design rule minimums, default net class, solder mask settings
+  vias/      via sizes and which kinds are allowed (through, blind, micro, buried)
 plus sizes.yaml, the predefined track widths added with every stackup.
 kicad-setting-boards/ has the template boards made from them.
 
   fab_settings.py list
   fab_settings.py apply board.kicad_pcb --stackup jlcpcb-4l-fr4-1.6mm --colors green \\
-      --rules jlcpcb-4l
+      --rules jlcpcb-4l --vias fr4-through
   fab_settings.py templates kicad-setting-boards/templates.yaml  # for Import Settings
 
 Stackups and colours edit the .kicad_pcb, rules edit the .kicad_pcb and its
-.kicad_pro. Only the edited settings change, so the board diffs cleanly.
+.kicad_pro, vias edit the .kicad_pro and the .kicad_dru (custom rules, only the
+block this script owns). Only the edited settings change, so the board diffs cleanly.
 """
 import argparse
 import json
@@ -31,7 +33,7 @@ from kicad_sexp import child, dump, is_node, load, num, replace_top_level, set_c
 from microstrip import width_for_impedance
 
 SETTINGS_DIR = Path(__file__).resolve().parent.parent / "fab-settings"
-KINDS = ("stackups", "colors", "rules")
+KINDS = ("stackups", "colors", "rules", "vias")
 DIELECTRIC_TYPES = ("core", "prepreg")
 # The bottom's mask, paste and silkscreen, which a single-sided (metal core)
 # board doesn't have, with their layer table ids (KiCad 9+, earlier) and the
@@ -203,8 +205,8 @@ class NetClass:
     """Board Setup > Net Classes, Default class."""
     clearance: float
     track_width: float
-    via_diameter: float
-    via_drill: float
+    via_diameter: float | None = None  # left to a vias profile when absent
+    via_drill: float | None = None
 
 
 @dataclass(frozen=True)
@@ -235,6 +237,50 @@ def parse_rules(data: dict) -> Rules:
     )
 
 
+# --- Vias -------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class ViaSize:
+    diameter: float
+    drill: float
+
+
+@dataclass(frozen=True)
+class Vias:
+    """Via sizes and allowed kinds. `sizes` are Board Setup > Pre-defined Sizes, the
+    first is the default net class via. `buried: false` is a custom DRC rule, KiCad
+    has no setting for blind without buried."""
+    name: str
+    description: str
+    sizes: tuple[ViaSize, ...]
+    blind: bool
+    buried: bool
+    microvia: ViaSize | None
+    through_nets: tuple[str, ...] = ()  # nets whose vias must go all the way through
+    skip_vias: bool = True  # blind vias spanning more than one layer pair
+    inner_microvias: bool = True  # microvias between two inner layers (not 1+N+1)
+
+
+def parse_vias(data: dict) -> Vias:
+    check_keys(data, {"name", "description", "source", "sizes", "blind", "buried", "microvia",
+                      "through_nets", "skip_vias", "inner_microvias"})
+    sizes = tuple(ViaSize(**size) for size in data["sizes"])
+    if not sizes:
+        raise SettingsError("sizes is empty")
+    microvia = ViaSize(**data["microvia"]) if data.get("microvia") else None
+    blind, buried = bool(data["blind"]), bool(data["buried"])
+    if buried and not blind:
+        raise SettingsError("buried vias need blind: true")
+    for size in (*sizes, *([microvia] if microvia else [])):
+        if size.drill >= size.diameter:
+            raise SettingsError(f"via {size.diameter}/{size.drill}: drill must be under the pad")
+    return Vias(name=data["name"], description=data.get("description", ""), sizes=sizes,
+                blind=blind, buried=buried, microvia=microvia,
+                through_nets=tuple(data.get("through_nets") or ()),
+                skip_vias=bool(data.get("skip_vias", True)),
+                inner_microvias=bool(data.get("inner_microvias", True)))
+
+
 # --- Predefined sizes ---------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -252,7 +298,8 @@ def load_sizes() -> Sizes:
 
 # --- Loading ----------------------------------------------------------------
 
-PARSERS = {"stackups": parse_stackup, "colors": parse_colors, "rules": parse_rules}
+PARSERS = {"stackups": parse_stackup, "colors": parse_colors, "rules": parse_rules,
+           "vias": parse_vias}
 
 
 def available(kind: str) -> list[str]:
@@ -479,36 +526,116 @@ def predefined_track_widths(stackup: Stackup, sizes: Sizes, min_width: float) ->
     return sorted(w for w in widths if w >= min_width)
 
 
+def check_vias_fit_rules(vias: Vias, rules: Rules) -> None:
+    limits = rules.constraints
+    for size in vias.sizes:
+        if (size.diameter < limits.min_via_diameter - 1e-9
+                or size.drill < limits.min_through_hole_diameter - 1e-9):
+            raise SettingsError(f"via {size.diameter}/{size.drill} is under the {rules.name} "
+                                f"minimum ({limits.min_via_diameter}/"
+                                f"{limits.min_through_hole_diameter})")
+        if (size.diameter - size.drill) / 2 < limits.min_via_annular_width - 1e-9:
+            raise SettingsError(f"via {size.diameter}/{size.drill} has less annular ring "
+                                f"than the {rules.name} minimum {limits.min_via_annular_width}")
+
+
 def apply_to_project(project: dict, stackup: Stackup | None, rules: Rules | None,
-                     sizes: Sizes) -> None:
+                     vias: Vias | None, sizes: Sizes) -> None:
     design = project["board"]["design_settings"]
+    default = next(c for c in project["net_settings"]["classes"] if c["name"] == "Default")
     if rules:
         design["rules"].update(vars(rules.constraints))
-        default = next(c for c in project["net_settings"]["classes"] if c["name"] == "Default")
-        default.update(vars(rules.default_netclass))
+        default.update({k: v for k, v in vars(rules.default_netclass).items() if v is not None})
+    if vias:
+        if rules:
+            check_vias_fit_rules(vias, rules)
+        design["rules"]["allow_blind_buried_vias"] = vias.blind
+        design["rules"]["allow_microvias"] = vias.microvia is not None
+        # The leading 0/0 is KiCad's "use net class via" entry
+        design["via_dimensions"] = [{"diameter": 0.0, "drill": 0.0},
+                                    *(vars(size).copy() for size in vias.sizes)]
+        default["via_diameter"], default["via_drill"] = vias.sizes[0].diameter, vias.sizes[0].drill
+        if vias.microvia:
+            design["rules"]["min_microvia_diameter"] = vias.microvia.diameter
+            design["rules"]["min_microvia_drill"] = vias.microvia.drill
+            default["microvia_diameter"] = vias.microvia.diameter
+            default["microvia_drill"] = vias.microvia.drill
     if stackup:
         min_width = design["rules"].get("min_track_width", 0)
         # The leading 0 is KiCad's "use net class width" entry
         design["track_widths"] = [0.0, *predefined_track_widths(stackup, sizes, min_width)]
 
 
+# --- Custom rules (.kicad_dru) -------------------------------------------------
+
+DRU_BEGIN = "# fab_settings vias: begin (generated, edit the vias profile instead)"
+DRU_END = "# fab_settings vias: end"
+DRU_BLOCK = re.compile(rf"\n*{re.escape(DRU_BEGIN)}.*?{re.escape(DRU_END)}\n?", re.S)
+
+
+def via_rules(vias: Vias, inner_count: int = 0) -> list[str]:
+    rules = []
+    if vias.blind and not vias.buried:
+        rules.append('(rule "No buried vias"\n\t(constraint disallow buried_via))')
+    if vias.blind and not vias.skip_vias:
+        # KiCad micro vias only join adjacent layers, so any blind via is a skip via
+        rules.append('(rule "No skip vias"\n\t(constraint disallow blind_via))')
+    if vias.microvia and not vias.inner_microvias:
+        # A micro via joins adjacent layers and a rule's (layer) scope matches a via
+        # on either end, so a via touching In2..In(n-1) has both ends inner. Those
+        # touching only In1 or In(n) run to the outer layers, as 1+N+1 needs.
+        for index in range(2, inner_count):
+            rules.append(f'(rule "No inner micro vias (In{index}.Cu)"\n'
+                         f'\t(constraint disallow micro_via)\n\t(layer "In{index}.Cu"))')
+    for net in vias.through_nets:
+        for kind in ("micro_via", "blind_via", "buried_via"):
+            rules.append(f'(rule "{net} through vias only ({kind})"\n'
+                         f'\t(constraint disallow {kind})\n'
+                         f"\t(condition \"A.NetName == '{net}'\"))")
+    return rules
+
+
+def apply_to_custom_rules(text: str, vias: Vias, inner_count: int = 0) -> str:
+    """Replace this script's block in a .kicad_dru, leaving the user's own rules alone."""
+    text = DRU_BLOCK.sub("", text)
+    rules = via_rules(vias, inner_count)
+    if rules:
+        block = "\n".join([DRU_BEGIN, *rules, DRU_END]) + "\n"
+        text = (text.rstrip("\n") + "\n\n" if text.strip() else "(version 1)\n\n") + block
+    return text if text.strip() != "(version 1)" else ""
+
+
 def project_path(board: Path) -> Path:
     return board.with_suffix(".kicad_pro")
 
 
+def custom_rules_path(board: Path) -> Path:
+    return board.with_suffix(".kicad_dru")
+
+
 def apply(board: Path, output: Path, stackup: Stackup | None, colors: Colors | None,
-          rules: Rules | None) -> None:
+          rules: Rules | None, vias: Vias | None = None) -> None:
     text = apply_to_board(board.read_text(encoding="utf-8"), stackup, colors, rules)
     project = None
-    if stackup or rules:
+    if stackup or rules or vias:
         if project_path(board).exists():
             project = json.loads(project_path(board).read_text(encoding="utf-8"))
-            apply_to_project(project, stackup, rules, load_sizes())
-        elif rules:
-            raise SettingsError(f"rules go in {project_path(board)}, which doesn't exist")
+            apply_to_project(project, stackup, rules, vias, load_sizes())
+        elif rules or vias:
+            raise SettingsError(f"rules and vias go in {project_path(board)}, "
+                                "which doesn't exist")
     output.write_text(text, encoding="utf-8")
     if project is not None:
         project_path(output).write_text(json.dumps(project, indent=2) + "\n", encoding="utf-8")
+    if vias:
+        source = custom_rules_path(board)
+        dru = apply_to_custom_rules(source.read_text(encoding="utf-8") if source.exists() else "",
+                                    vias, len(set(re.findall(r'"In(\d+)\.Cu"', text))))
+        target = custom_rules_path(output)
+        if dru:
+            target.write_text(dru, encoding="utf-8")
+        else:
+            target.unlink(missing_ok=True)
 
 
 # --- Template boards ---------------------------------------------------------
@@ -523,6 +650,7 @@ def write_templates(template_list: Path, out_dir: Path) -> None:
         stackup = load_setting("stackups", parts["stackup"])
         colors = load_setting("colors", parts["colors"])
         rules = load_setting("rules", parts["rules"])
+        vias = load_setting("vias", parts["vias"]) if parts.get("vias") else None
         directory = out_dir / name
         shutil.rmtree(directory, ignore_errors=True)
         directory.mkdir(parents=True)
@@ -530,8 +658,9 @@ def write_templates(template_list: Path, out_dir: Path) -> None:
         pcbnew.SaveBoard(str(board), pcbnew.NewBoard(str(board)))
         # Local view settings, not part of what Import Settings reads
         board.with_suffix(".kicad_prl").unlink(missing_ok=True)
-        apply(board, board, stackup, colors, rules)
-        print(f"fab_settings: {board}: {stackup.name}, {colors.name}, {rules.name}")
+        apply(board, board, stackup, colors, rules, vias)
+        print(f"fab_settings: {board}: "
+              + ", ".join(x.name for x in (stackup, colors, rules, vias) if x))
 
 
 # --- CLI ---------------------------------------------------------------------
@@ -550,17 +679,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("list", help="list available stackups, colours and rules")
+    commands.add_parser("list", help="list available stackups, colours, rules and vias")
     apply_parser = commands.add_parser("apply", help="apply settings to a board")
     apply_parser.add_argument("board", type=Path, help=".kicad_pcb to edit in place")
     apply_parser.add_argument("-o", "--output", type=Path,
                               help="write here (and its .kicad_pro) instead of in place")
-    for kind, flag in (("stackups", "--stackup"), ("colors", "--colors"), ("rules", "--rules")):
+    for kind, flag in (("stackups", "--stackup"), ("colors", "--colors"), ("rules", "--rules"),
+                       ("vias", "--vias")):
         apply_parser.add_argument(flag, dest=kind, help=f"name from fab-settings/{kind}/ "
                                   "or a path to a .yaml file")
     templates_parser = commands.add_parser("templates", help="write the boards in a template list")
     templates_parser.add_argument("list", type=Path,
-                                  help="YAML of board name -> stackup, colors, rules")
+                                  help="YAML of board name -> stackup, colors, rules, vias")
     templates_parser.add_argument("-o", "--output", type=Path,
                                   help="directory to write to (default: the list's directory)")
     args = parser.parse_args()
@@ -574,9 +704,9 @@ def main():
             chosen = {kind: load_setting(kind, getattr(args, kind))
                       for kind in KINDS if getattr(args, kind)}
             if not chosen:
-                parser.error("give at least one of --stackup, --colors, --rules")
+                parser.error("give at least one of --stackup, --colors, --rules, --vias")
             apply(args.board, args.output or args.board, chosen.get("stackups"),
-                  chosen.get("colors"), chosen.get("rules"))
+                  chosen.get("colors"), chosen.get("rules"), chosen.get("vias"))
             print(f"fab_settings: {args.output or args.board}: "
                   + ", ".join(setting.name for setting in chosen.values()))
     except SettingsError as error:
